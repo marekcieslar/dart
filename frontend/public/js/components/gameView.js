@@ -281,26 +281,27 @@ let showAllHistory = false;
 
 const renderHistory = async () => {
   const historyContainer = document.getElementById("history");
-  
+
   try {
     const history = await api.getHistory(gameId);
-    
+
     if (history.length === 0) {
-      historyContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No turns yet</div>';
+      historyContainer.innerHTML =
+        '<div class="text-gray-500 text-center py-4">No turns yet</div>';
       return;
     }
-    
+
     // Show only last 10 turns by default, unless showAllHistory is true
     const displayLimit = showAllHistory ? history.length : 10;
     const displayHistory = history.slice(-displayLimit);
     const hasMore = history.length > displayLimit;
-    
+
     const historyHTML = displayHistory
       .map((turn) => {
-        const dartsDisplay = turn.darts.map(d => formatDart(d)).join(", ");
+        const dartsDisplay = turn.darts.map((d) => formatDart(d)).join(", ");
         const scoreChange = turn.remainingBefore - turn.remainingAfter;
-        const bustClass = turn.isBust ? 'text-red-600 font-bold' : '';
-        
+        const bustClass = turn.isBust ? "text-red-600 font-bold" : "";
+
         return `
           <div class="flex justify-between items-center p-2 border-b border-gray-200 ${bustClass}">
             <div class="flex-1">
@@ -308,57 +309,103 @@ const renderHistory = async () => {
               <span class="text-gray-600 ml-2 text-xs md:text-sm">${dartsDisplay}</span>
             </div>
             <div class="text-right">
-              <div class="font-bold">${turn.isBust ? 'BUST' : scoreChange}</div>
-              <div class="text-xs text-gray-500">${turn.remainingAfter ?? turn.remainingBefore} left</div>
+              <div class="font-bold">${turn.isBust ? "BUST" : scoreChange}</div>
+              <div class="text-xs text-gray-500">${
+                turn.remainingAfter ?? turn.remainingBefore
+              } left</div>
             </div>
           </div>
         `;
       })
       .reverse()
       .join("");
-    
-    const showMoreButton = !showAllHistory && hasMore
-      ? `<button id="show-more-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show ${history.length - displayLimit} more turns</button>`
-      : showAllHistory && history.length > 10
-      ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show less</button>`
-      : '';
-    
+
+    const showMoreButton =
+      !showAllHistory && hasMore
+        ? `<button id="show-more-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show ${
+            history.length - displayLimit
+          } more turns</button>`
+        : showAllHistory && history.length > 10
+        ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show less</button>`
+        : "";
+
     historyContainer.innerHTML = historyHTML + showMoreButton;
-    
+
     // Add event listeners for show more/less buttons
     const showMoreBtn = document.getElementById("show-more-history");
     const showLessBtn = document.getElementById("show-less-history");
-    
+
     if (showMoreBtn) {
       showMoreBtn.addEventListener("click", () => {
         showAllHistory = true;
         renderHistory();
       });
     }
-    
+
     if (showLessBtn) {
       showLessBtn.addEventListener("click", () => {
         showAllHistory = false;
         renderHistory();
       });
     }
-    
+
     // Auto-scroll to top (latest turns at top after reverse)
     historyContainer.scrollTop = 0;
   } catch (error) {
     console.error("Error loading history:", error);
-    historyContainer.innerHTML = '<div class="text-red-500 text-center py-4">Failed to load history</div>';
+    historyContainer.innerHTML =
+      '<div class="text-red-500 text-center py-4">Failed to load history</div>';
   }
 };
 
 // Copy link
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
-  const link = isAdmin
-    ? window.location.href
-    : window.location.origin + window.location.pathname + "?id=" + gameId;
-  const success = await copyToClipboard(link);
-  if (success) {
-    showToast("Link copied!", "success");
+  if (isAdmin) {
+    // Show modal for admin to choose which link
+    document.getElementById("copy-modal").classList.remove("hidden");
+  } else {
+    // Direct copy for non-admin (view-only link)
+    const link =
+      window.location.origin + window.location.pathname + "?id=" + gameId;
+    const success = await copyToClipboard(link);
+    if (success) {
+      showToast("Link copied!", "success");
+    }
+  }
+});
+
+// Modal handlers
+document
+  .getElementById("copy-admin-link")
+  .addEventListener("click", async () => {
+    const adminLink = window.location.href; // Full URL with admin token
+    const success = await copyToClipboard(adminLink);
+    if (success) {
+      showToast("Admin link copied!", "success");
+    }
+    document.getElementById("copy-modal").classList.add("hidden");
+  });
+
+document
+  .getElementById("copy-view-link")
+  .addEventListener("click", async () => {
+    const viewLink =
+      window.location.origin + window.location.pathname + "?id=" + gameId;
+    const success = await copyToClipboard(viewLink);
+    if (success) {
+      showToast("View-only link copied!", "success");
+    }
+    document.getElementById("copy-modal").classList.add("hidden");
+  });
+
+document.getElementById("close-modal").addEventListener("click", () => {
+  document.getElementById("copy-modal").classList.add("hidden");
+});
+
+// Close modal on backdrop click
+document.getElementById("copy-modal").addEventListener("click", (e) => {
+  if (e.target.id === "copy-modal") {
+    document.getElementById("copy-modal").classList.add("hidden");
   }
 });
 
