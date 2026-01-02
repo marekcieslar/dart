@@ -19,6 +19,7 @@ Real-time dart scoring application for multiple players with live spectator supp
 ## 📖 Project Description
 
 Mobile-first application for managing dart games for 2-8 players with support for:
+
 - Real-time score updates for all spectators
 - Permission system (admin/viewer)
 - Game history
@@ -27,17 +28,20 @@ Mobile-first application for managing dart games for 2-8 players with support fo
 ## ✨ Features
 
 ### Game Modes
+
 - **301** - start with 301 points
 - **501** - start with 501 points
 - Straight in/straight out (no double in/out)
 - Matches: Best of 3, 5, or 7 legs
 
 ### Players
+
 - 2-8 players per game
 - No registration/login required
 - Loser of previous leg starts the next one
 
 ### Permission System
+
 - **Main admin** - game creator
 - **Additional admins** - unlimited (via special link)
 - **Viewers** - read-only access (via basic link)
@@ -48,6 +52,7 @@ Mobile-first application for managing dart games for 2-8 players with support fo
   - End game prematurely
 
 ### Input Interface (mobile)
+
 ```
 [1x] [double] [triple] ← modyfikatory
 
@@ -61,16 +66,19 @@ Mobile-first application for managing dart games for 2-8 players with support fo
 ```
 
 ### Statistics
+
 - **Leg average** - average points per throw in current leg
 - **Match average** - average points per throw for entire match
 - Calculation: total points / number of throws
 
 ### History
+
 - List of active games (10 + pagination)
 - List of finished games (10 + pagination)
 - Saved data: date, players, final score
 
 ### Rules
+
 - 3 throws per turn
 - **Bust** (exceeding 0) - turn cancelled, return to score before turn
 - Game timeout: 6 hours (automatic finish)
@@ -78,6 +86,7 @@ Mobile-first application for managing dart games for 2-8 players with support fo
 ## 🛠 Technologies
 
 ### Backend
+
 - **Node.js** - runtime
 - **Express** - HTTP server + REST API
 - **Socket.io** - WebSocket for real-time
@@ -85,6 +94,7 @@ Mobile-first application for managing dart games for 2-8 players with support fo
 - **UUID** - generating unique tokens
 
 ### Frontend
+
 - **Vanilla JavaScript** (ES6 modules)
 - **Tailwind CSS** (CDN) - styling
 - **Socket.io-client** - WebSocket client
@@ -199,6 +209,7 @@ NODE_ENV=production PORT=3000 node server.js
 ### REST Endpoints
 
 #### Create Game
+
 ```http
 POST /api/games
 Content-Type: application/json
@@ -223,6 +234,7 @@ Response:
 ```
 
 #### List Games
+
 ```http
 GET /api/games?status=active&page=1&limit=10
 
@@ -246,6 +258,7 @@ Response:
 ```
 
 #### Game Details
+
 ```http
 GET /api/games/:id
 
@@ -274,6 +287,7 @@ Response:
 ```
 
 #### Generate Admin Token
+
 ```http
 POST /api/games/:id/admin-token
 Content-Type: application/json
@@ -290,6 +304,7 @@ Response:
 ```
 
 #### Revoke Admin Token
+
 ```http
 DELETE /api/games/:id/admin-token
 Content-Type: application/json
@@ -306,6 +321,7 @@ Response:
 ```
 
 #### End Game
+
 ```http
 POST /api/games/:id/end
 Content-Type: application/json
@@ -322,6 +338,7 @@ Response:
 ```
 
 #### Verify Admin
+
 ```http
 GET /api/games/:id/verify-admin?token=admin-token
 
@@ -337,36 +354,40 @@ Response:
 ### Client → Server
 
 #### Join Game
+
 ```javascript
-socket.emit('join:game', {
-  gameId: 'uuid',
-  adminToken: 'uuid' // optional
+socket.emit("join:game", {
+  gameId: "uuid",
+  adminToken: "uuid", // optional
 });
 ```
 
 #### Add Dart (admin only)
+
 ```javascript
-socket.emit('game:add-dart', {
-  gameId: 'uuid',
-  adminToken: 'uuid',
-  score: 20,        // 0-25 (or null for MISS)
-  multiplier: 3     // 1, 2, or 3
+socket.emit("game:add-dart", {
+  gameId: "uuid",
+  adminToken: "uuid",
+  score: 20, // 0-25 (or null for MISS)
+  multiplier: 3, // 1, 2, or 3
 });
 ```
 
 #### Undo Dart (admin only)
+
 ```javascript
-socket.emit('game:undo-dart', {
-  gameId: 'uuid',
-  adminToken: 'uuid'
+socket.emit("game:undo-dart", {
+  gameId: "uuid",
+  adminToken: "uuid",
 });
 ```
 
 ### Server → Client
 
 #### Game State Update
+
 ```javascript
-socket.on('game:update', (data) => {
+socket.on("game:update", (data) => {
   // data = {
   //   currentLeg: 2,
   //   currentPlayer: 1,
@@ -388,8 +409,9 @@ socket.on('game:update', (data) => {
 ```
 
 #### Leg Finished
+
 ```javascript
-socket.on('leg:finished', (data) => {
+socket.on("leg:finished", (data) => {
   // data = {
   //   legNumber: 2,
   //   winner: {
@@ -403,8 +425,9 @@ socket.on('leg:finished', (data) => {
 ```
 
 #### Game Finished
+
 ```javascript
-socket.on('game:finished', (data) => {
+socket.on("game:finished", (data) => {
   // data = {
   //   winner: {
   //     id: 1,
@@ -417,8 +440,9 @@ socket.on('game:finished', (data) => {
 ```
 
 #### Error
+
 ```javascript
-socket.on('game:error', (data) => {
+socket.on("game:error", (data) => {
   // data = {
   //   message: "Bust! Turn cancelled.",
   //   type: "bust"
@@ -427,8 +451,9 @@ socket.on('game:error', (data) => {
 ```
 
 #### Admins Update
+
 ```javascript
-socket.on('admins:update', (data) => {
+socket.on("admins:update", (data) => {
   // data = {
   //   count: 3,
   //   activeTokens: ['token1', 'token2', 'token3']
@@ -439,63 +464,68 @@ socket.on('admins:update', (data) => {
 ## 🗄 Database Schema
 
 ### Table `games`
-| Column | Type | Description |
-|---------|-----|------|
-| id | TEXT (PK) | Game UUID |
-| type | INTEGER | 301 or 501 |
-| best_of | INTEGER | 3, 5, or 7 |
-| status | TEXT | 'active', 'finished', 'abandoned' |
-| created_at | DATETIME | Creation date |
-| finished_at | DATETIME | Finish date (nullable) |
-| admin_token | TEXT | Main admin token |
+
+| Column      | Type      | Description                       |
+| ----------- | --------- | --------------------------------- |
+| id          | TEXT (PK) | Game UUID                         |
+| type        | INTEGER   | 301 or 501                        |
+| best_of     | INTEGER   | 3, 5, or 7                        |
+| status      | TEXT      | 'active', 'finished', 'abandoned' |
+| created_at  | DATETIME  | Creation date                     |
+| finished_at | DATETIME  | Finish date (nullable)            |
+| admin_token | TEXT      | Main admin token                  |
 
 ### Table `game_players`
-| Column | Type | Description |
-|---------|-----|------|
-| id | INTEGER (PK, AI) | Player ID |
-| game_id | TEXT (FK) | Game UUID |
-| player_name | TEXT | Player name |
-| player_order | INTEGER | Throw order (0-7) |
-| legs_won | INTEGER | Legs won (default: 0) |
+
+| Column       | Type             | Description           |
+| ------------ | ---------------- | --------------------- |
+| id           | INTEGER (PK, AI) | Player ID             |
+| game_id      | TEXT (FK)        | Game UUID             |
+| player_name  | TEXT             | Player name           |
+| player_order | INTEGER          | Throw order (0-7)     |
+| legs_won     | INTEGER          | Legs won (default: 0) |
 
 ### Table `legs`
-| Column | Type | Description |
-|---------|-----|------|
-| id | INTEGER (PK, AI) | Leg ID |
-| game_id | TEXT (FK) | Game UUID |
-| leg_number | INTEGER | Leg number (1-7) |
-| winner_id | INTEGER (FK) | Winner ID (nullable) |
-| started_at | DATETIME | Leg start |
-| finished_at | DATETIME | Leg end (nullable) |
+
+| Column      | Type             | Description          |
+| ----------- | ---------------- | -------------------- |
+| id          | INTEGER (PK, AI) | Leg ID               |
+| game_id     | TEXT (FK)        | Game UUID            |
+| leg_number  | INTEGER          | Leg number (1-7)     |
+| winner_id   | INTEGER (FK)     | Winner ID (nullable) |
+| started_at  | DATETIME         | Leg start            |
+| finished_at | DATETIME         | Leg end (nullable)   |
 
 ### Table `turns`
-| Column | Type | Description |
-|---------|-----|------|
-| id | INTEGER (PK, AI) | Turn ID |
-| leg_id | INTEGER (FK) | Leg ID |
-| player_id | INTEGER (FK) | Player ID |
-| turn_number | INTEGER | Turn number |
-| dart1_score | INTEGER | 1st dart score (nullable) |
-| dart1_multiplier | INTEGER | 1st dart multiplier |
-| dart2_score | INTEGER | 2nd dart score (nullable) |
-| dart2_multiplier | INTEGER | 2nd dart multiplier |
-| dart3_score | INTEGER | 3rd dart score (nullable) |
-| dart3_multiplier | INTEGER | 3rd dart multiplier |
-| total_score | INTEGER | Total turn score |
-| remaining_before | INTEGER | Score before turn |
-| remaining_after | INTEGER | Score after turn |
-| is_bust | BOOLEAN | Whether turn was bust |
-| created_at | DATETIME | Timestamp |
+
+| Column           | Type             | Description               |
+| ---------------- | ---------------- | ------------------------- |
+| id               | INTEGER (PK, AI) | Turn ID                   |
+| leg_id           | INTEGER (FK)     | Leg ID                    |
+| player_id        | INTEGER (FK)     | Player ID                 |
+| turn_number      | INTEGER          | Turn number               |
+| dart1_score      | INTEGER          | 1st dart score (nullable) |
+| dart1_multiplier | INTEGER          | 1st dart multiplier       |
+| dart2_score      | INTEGER          | 2nd dart score (nullable) |
+| dart2_multiplier | INTEGER          | 2nd dart multiplier       |
+| dart3_score      | INTEGER          | 3rd dart score (nullable) |
+| dart3_multiplier | INTEGER          | 3rd dart multiplier       |
+| total_score      | INTEGER          | Total turn score          |
+| remaining_before | INTEGER          | Score before turn         |
+| remaining_after  | INTEGER          | Score after turn          |
+| is_bust          | BOOLEAN          | Whether turn was bust     |
+| created_at       | DATETIME         | Timestamp                 |
 
 ### Table `admin_tokens`
-| Column | Type | Description |
-|---------|-----|------|
-| id | INTEGER (PK, AI) | Token ID |
-| game_id | TEXT (FK) | Game UUID |
-| token | TEXT (UNIQUE) | Token UUID |
-| created_by | TEXT | Creator token |
-| created_at | DATETIME | Creation date |
-| revoked | BOOLEAN | Whether revoked (default: 0) |
+
+| Column     | Type             | Description                  |
+| ---------- | ---------------- | ---------------------------- |
+| id         | INTEGER (PK, AI) | Token ID                     |
+| game_id    | TEXT (FK)        | Game UUID                    |
+| token      | TEXT (UNIQUE)    | Token UUID                   |
+| created_by | TEXT             | Creator token                |
+| created_at | DATETIME         | Creation date                |
+| revoked    | BOOLEAN          | Whether revoked (default: 0) |
 
 ## 🚀 Deployment
 
@@ -526,6 +556,7 @@ NODE_ENV=production PORT=3000 node server.js
 ```
 
 ### Access
+
 - **Frontend**: https://frog03-11217.wykr.es/
 - **Backend API**: https://frog03-11217.wykr.es/api
 - **WebSocket**: wss://frog03-11217.wykr.es/
@@ -553,17 +584,20 @@ pm2 logs dart-app
 ## 📝 Developer Notes
 
 ### Timeouts
+
 - Game automatically ends after **6 hours** of inactivity
 - WebSocket reconnection: automatic (Socket.io)
 - Ping interval: 25s, timeout: 5s
 
 ### Limits
+
 - Players: 2-8 per game
 - Admins: unlimited
 - History: stored indefinitely (for now)
 - Pagination: 10 items per page
 
 ### Business Rules
+
 - Bust: exceeding 0 → turn cancelled, return to score before turn
 - Next leg start: loser of previous leg
 - Checkout: no double out required

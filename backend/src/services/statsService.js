@@ -1,11 +1,11 @@
-import { all } from '../config/database.js';
-import { calculateDartValue } from '../utils/validators.js';
+import { all } from "../config/database.js";
+import { calculateDartValue } from "../utils/validators.js";
 
 export const StatsService = {
   // Calculate average for a player in current leg
   calculateLegAverage: async (legId, playerId) => {
     const turns = await all(
-      'SELECT * FROM turns WHERE leg_id = ? AND player_id = ? AND is_bust = 0',
+      "SELECT * FROM turns WHERE leg_id = ? AND player_id = ? AND is_bust = 0",
       [legId, playerId]
     );
 
@@ -17,7 +17,7 @@ export const StatsService = {
       const darts = [
         { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
         { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
-        { score: turn.dart3_score, multiplier: turn.dart3_multiplier }
+        { score: turn.dart3_score, multiplier: turn.dart3_multiplier },
       ];
 
       for (const dart of darts) {
@@ -28,7 +28,9 @@ export const StatsService = {
       }
     }
 
-    return totalDarts > 0 ? Math.round((totalPoints / totalDarts) * 100) / 100 : 0;
+    return totalDarts > 0
+      ? Math.round((totalPoints / totalDarts) * 100) / 100
+      : 0;
   },
 
   // Calculate average for a player across all legs in game
@@ -47,7 +49,7 @@ export const StatsService = {
       const darts = [
         { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
         { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
-        { score: turn.dart3_score, multiplier: turn.dart3_multiplier }
+        { score: turn.dart3_score, multiplier: turn.dart3_multiplier },
       ];
 
       for (const dart of darts) {
@@ -58,7 +60,9 @@ export const StatsService = {
       }
     }
 
-    return totalDarts > 0 ? Math.round((totalPoints / totalDarts) * 100) / 100 : 0;
+    return totalDarts > 0
+      ? Math.round((totalPoints / totalDarts) * 100) / 100
+      : 0;
   },
 
   // Get player statistics for current state
@@ -68,7 +72,7 @@ export const StatsService = {
 
     // Get last three darts
     const lastTurn = await all(
-      'SELECT * FROM turns WHERE leg_id = ? AND player_id = ? ORDER BY id DESC LIMIT 1',
+      "SELECT * FROM turns WHERE leg_id = ? AND player_id = ? ORDER BY id DESC LIMIT 1",
       [legId, playerId]
     );
 
@@ -78,18 +82,18 @@ export const StatsService = {
       const darts = [
         { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
         { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
-        { score: turn.dart3_score, multiplier: turn.dart3_multiplier }
+        { score: turn.dart3_score, multiplier: turn.dart3_multiplier },
       ];
-      lastThreeDarts = darts.filter(d => d.score !== null);
+      lastThreeDarts = darts.filter((d) => d.score !== null);
     }
 
     return {
       currentScore,
       avgThisLeg: legAvg,
       avgTotal: matchAvg,
-      lastThreeDarts
+      lastThreeDarts,
     };
-  }
+  },
 };
 
 export default StatsService;

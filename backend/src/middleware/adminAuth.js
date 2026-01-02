@@ -1,4 +1,4 @@
-import { get } from '../config/database.js';
+import { get } from "../config/database.js";
 
 // Verify if token is a valid admin token for the game
 export const verifyAdminToken = async (gameId, token) => {
@@ -8,10 +8,9 @@ export const verifyAdminToken = async (gameId, token) => {
 
   try {
     // Check if it's the main admin token
-    const game = await get(
-      'SELECT admin_token FROM games WHERE id = ?',
-      [gameId]
-    );
+    const game = await get("SELECT admin_token FROM games WHERE id = ?", [
+      gameId,
+    ]);
 
     if (game && game.admin_token === token) {
       return { valid: true, isMainAdmin: true };
@@ -19,7 +18,7 @@ export const verifyAdminToken = async (gameId, token) => {
 
     // Check if it's a valid additional admin token
     const adminToken = await get(
-      'SELECT * FROM admin_tokens WHERE game_id = ? AND token = ? AND revoked = 0',
+      "SELECT * FROM admin_tokens WHERE game_id = ? AND token = ? AND revoked = 0",
       [gameId, token]
     );
 
@@ -29,7 +28,7 @@ export const verifyAdminToken = async (gameId, token) => {
 
     return { valid: false, isMainAdmin: false };
   } catch (error) {
-    console.error('Error verifying admin token:', error);
+    console.error("Error verifying admin token:", error);
     return { valid: false, isMainAdmin: false };
   }
 };
@@ -42,7 +41,7 @@ export const requireAdmin = async (req, res, next) => {
   const { valid } = await verifyAdminToken(gameId, token);
 
   if (!valid) {
-    return res.status(403).json({ error: 'Invalid or missing admin token' });
+    return res.status(403).json({ error: "Invalid or missing admin token" });
   }
 
   req.adminToken = token;
@@ -57,7 +56,7 @@ export const requireMainAdmin = async (req, res, next) => {
   const { valid, isMainAdmin } = await verifyAdminToken(gameId, token);
 
   if (!valid || !isMainAdmin) {
-    return res.status(403).json({ error: 'Main admin token required' });
+    return res.status(403).json({ error: "Main admin token required" });
   }
 
   req.adminToken = token;

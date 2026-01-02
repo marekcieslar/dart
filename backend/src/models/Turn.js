@@ -1,4 +1,4 @@
-import { run, get, all } from '../config/database.js';
+import { run, get, all } from "../config/database.js";
 
 export const Turn = {
   // Create new turn
@@ -13,13 +13,13 @@ export const Turn = {
 
   // Get turn by ID
   getById: async (id) => {
-    return await get('SELECT * FROM turns WHERE id = ?', [id]);
+    return await get("SELECT * FROM turns WHERE id = ?", [id]);
   },
 
   // Get all turns for a leg
   getByLegId: async (legId) => {
     return await all(
-      'SELECT * FROM turns WHERE leg_id = ? ORDER BY turn_number, created_at',
+      "SELECT * FROM turns WHERE leg_id = ? ORDER BY turn_number, created_at",
       [legId]
     );
   },
@@ -27,7 +27,7 @@ export const Turn = {
   // Get last turn for a leg
   getLastTurn: async (legId) => {
     return await get(
-      'SELECT * FROM turns WHERE leg_id = ? ORDER BY id DESC LIMIT 1',
+      "SELECT * FROM turns WHERE leg_id = ? ORDER BY id DESC LIMIT 1",
       [legId]
     );
   },
@@ -41,6 +41,14 @@ export const Turn = {
     );
   },
 
+  // Update remaining after for incomplete turn
+  updateRemainingAfter: async (id, remainingAfter) => {
+    await run(`UPDATE turns SET remaining_after = ? WHERE id = ?`, [
+      remainingAfter,
+      id,
+    ]);
+  },
+
   // Complete turn
   complete: async (id, totalScore, remainingAfter, isBust) => {
     await run(
@@ -51,8 +59,8 @@ export const Turn = {
 
   // Delete turn (for undo)
   delete: async (id) => {
-    await run('DELETE FROM turns WHERE id = ?', [id]);
-  }
+    await run("DELETE FROM turns WHERE id = ?", [id]);
+  },
 };
 
 export default Turn;

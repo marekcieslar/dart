@@ -1,34 +1,34 @@
-import { v4 as uuidv4 } from 'uuid';
-import Game from '../models/Game.js';
-import Player from '../models/Player.js';
-import Leg from '../models/Leg.js';
-import Turn from '../models/Turn.js';
-import StatsService from './statsService.js';
-import { 
-  getStartingScore, 
-  calculateDartValue, 
-  isBust, 
-  isWin, 
+import { v4 as uuidv4 } from "uuid";
+import Game from "../models/Game.js";
+import Player from "../models/Player.js";
+import Leg from "../models/Leg.js";
+import Turn from "../models/Turn.js";
+import StatsService from "./statsService.js";
+import {
+  getStartingScore,
+  calculateDartValue,
+  isBust,
+  isWin,
   formatDart,
-  hasWonMatch 
-} from '../utils/gameLogic.js';
+  hasWonMatch,
+} from "../utils/gameLogic.js";
 import {
   isValidGameType,
   isValidBestOf,
   validatePlayerNames,
-  validateDartThrow
-} from '../utils/validators.js';
+  validateDartThrow,
+} from "../utils/validators.js";
 
 export const GameService = {
   // Create new game
   createGame: async (type, bestOf, playerNames) => {
     // Validate input
     if (!isValidGameType(type)) {
-      throw new Error('Invalid game type. Must be 301 or 501');
+      throw new Error("Invalid game type. Must be 301 or 501");
     }
 
     if (!isValidBestOf(bestOf)) {
-      throw new Error('Invalid best of. Must be 3, 5, or 7');
+      throw new Error("Invalid best of. Must be 3, 5, or 7");
     }
 
     const validation = validatePlayerNames(playerNames);
@@ -50,7 +50,7 @@ export const GameService = {
 
     return {
       gameId,
-      adminToken
+      adminToken,
     };
   },
 
@@ -58,36 +58,51 @@ export const GameService = {
   getGameState: async (gameId) => {
     const game = await Game.getById(gameId);
     if (!game) {
-      throw new Error('Game not found');
+      throw new Error("Game not found");
     }
 
     const players = await Player.getByGameId(gameId);
     const currentLeg = await Leg.getCurrentLeg(gameId);
-    
+
     if (!currentLeg) {
-      throw new Error('No active leg found');
+      throw new Error("No active leg found");
     }
 
     // Get current scores for each player
     const playerStates = [];
     for (const player of players) {
-      const currentScore = await GameService.getPlayerCurrentScore(currentLeg.id, player.id, game.type);
-      const stats = await StatsService.getPlayerStats(gameId, currentLeg.id, player.id, currentScore);
-      
+      const currentScore = await GameService.getPlayerCurrentScore(
+        currentLeg.id,
+        player.id,
+        game.type
+      );
+      const stats = await StatsService.getPlayerStats(
+        gameId,
+        currentLeg.id,
+        player.id,
+        currentScore
+      );
+
       playerStates.push({
         id: player.id,
         name: player.player_name,
         order: player.player_order,
         legsWon: player.legs_won,
-        ...stats
+        ...stats,
       });
     }
 
     // Get current player turn
-    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(currentLeg.id, players);
-    
+    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(
+      currentLeg.id,
+      players
+    );
+
     // Get current turn (incomplete darts)
-    const currentTurn = await GameService.getCurrentTurnDarts(currentLeg.id, players[currentPlayerIndex].id);
+    const currentTurn = await GameService.getCurrentTurnDarts(
+      currentLeg.id,
+      players[currentPlayerIndex].id
+    );
 
     return {
       id: game.id,
@@ -100,7 +115,7 @@ export const GameService = {
       currentPlayer: currentPlayerIndex,
       players: playerStates,
       currentTurn,
-      turnNumber: await GameService.getTurnNumber(currentLeg.id)
+      turnNumber: await GameService.getTurnNumber(currentLeg.id),
     };
   },
 
@@ -108,27 +123,28 @@ export const GameService = {
   getPlayerCurrentScore: async (legId, playerId, gameType) => {
     const turns = await Turn.getByLegId(legId);
     const startingScore = getStartingScore(gameType);
-    
+
     let score = startingScore;
-    
+
     for (const turn of turns) {
       if (turn.player_id === playerId && !turn.is_bust) {
         score = turn.remaining_after;
       }
     }
-    
+
     return score;
   },
 
   // Get current player index (whose turn it is)
   getCurrentPlayerIndex: async (legId, players) => {
     const turns = await Turn.getByLegId(legId);
-    
+
     // Count completed turns (all 3 darts thrown)
-    const completedTurns = turns.filter(t => 
-      t.dart1_score !== null && 
-      t.dart2_score !== null && 
-      t.dart3_score !== null
+    const completedTurns = turns.filter(
+      (t) =>
+        t.dart1_score !== null &&
+        t.dart2_score !== null &&
+        t.dart3_score !== null
     );
 
     return completedTurns.length % players.length;
@@ -137,7 +153,7 @@ export const GameService = {
   // Get current turn's darts (incomplete turn)
   getCurrentTurnDarts: async (legId, playerId) => {
     const lastTurn = await Turn.getLastTurn(legId);
-    
+
     if (!lastTurn || lastTurn.player_id !== playerId) {
       return [];
     }
@@ -149,12 +165,18 @@ export const GameService = {
 
     const darts = [];
     if (lastTurn.dart1_score !== null) {
-      darts.push(formatDart(lastTurn.dart1_score, lastTurn.dart1_multiplier));
+      darts.push({
+        score: lastTurn.dart1_score,
+        multiplier: lastTurn.dart1_multiplier,
+      });
     }
     if (lastTurn.dart2_score !== null) {
-      darts.push(formatDart(lastTurn.dart2_score, lastTurn.dart2_multiplier));
+      darts.push({
+        score: lastTurn.dart2_score,
+        multiplier: lastTurn.dart2_multiplier,
+      });
     }
-    
+
     return darts;
   },
 
@@ -168,11 +190,11 @@ export const GameService = {
   addDart: async (gameId, score, multiplier) => {
     const game = await Game.getById(gameId);
     if (!game) {
-      throw new Error('Game not found');
+      throw new Error("Game not found");
     }
 
-    if (game.status !== 'active') {
-      throw new Error('Game is not active');
+    if (game.status !== "active") {
+      throw new Error("Game is not active");
     }
 
     // Validate dart
@@ -183,20 +205,33 @@ export const GameService = {
 
     const currentLeg = await Leg.getCurrentLeg(gameId);
     const players = await Player.getByGameId(gameId);
-    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(currentLeg.id, players);
+    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(
+      currentLeg.id,
+      players
+    );
     const currentPlayer = players[currentPlayerIndex];
 
     // Get or create current turn
     let currentTurn = await Turn.getLastTurn(currentLeg.id);
-    
-    const needsNewTurn = !currentTurn || 
-                        currentTurn.player_id !== currentPlayer.id || 
-                        currentTurn.dart3_score !== null;
+
+    const needsNewTurn =
+      !currentTurn ||
+      currentTurn.player_id !== currentPlayer.id ||
+      currentTurn.dart3_score !== null;
 
     if (needsNewTurn) {
       const turnNumber = await GameService.getTurnNumber(currentLeg.id);
-      const remainingBefore = await GameService.getPlayerCurrentScore(currentLeg.id, currentPlayer.id, game.type);
-      const turnId = await Turn.create(currentLeg.id, currentPlayer.id, turnNumber, remainingBefore);
+      const remainingBefore = await GameService.getPlayerCurrentScore(
+        currentLeg.id,
+        currentPlayer.id,
+        game.type
+      );
+      const turnId = await Turn.create(
+        currentLeg.id,
+        currentPlayer.id,
+        turnNumber,
+        remainingBefore
+      );
       currentTurn = await Turn.getById(turnId);
     }
 
@@ -209,15 +244,63 @@ export const GameService = {
     } else if (currentTurn.dart3_score === null) {
       dartNumber = 3;
     } else {
-      throw new Error('Turn is already complete');
+      throw new Error("Turn is already complete");
     }
 
     // Update dart
     await Turn.updateDart(currentTurn.id, dartNumber, score, multiplier);
     currentTurn = await Turn.getById(currentTurn.id);
 
-    // Check if turn is complete
-    if (dartNumber === 3 || score === null) {
+    // Calculate current total and remaining score after this dart
+    const darts = [
+      {
+        score: currentTurn.dart1_score,
+        multiplier: currentTurn.dart1_multiplier,
+      },
+      {
+        score: currentTurn.dart2_score,
+        multiplier: currentTurn.dart2_multiplier,
+      },
+      {
+        score: currentTurn.dart3_score,
+        multiplier: currentTurn.dart3_multiplier,
+      },
+    ];
+
+    let totalScore = 0;
+    for (const dart of darts) {
+      if (dart.score !== null) {
+        totalScore += calculateDartValue(dart.score, dart.multiplier);
+      }
+    }
+
+    const currentRemaining = currentTurn.remaining_before - totalScore;
+
+    // Update remaining_after for incomplete turn
+    await Turn.updateRemainingAfter(currentTurn.id, currentRemaining);
+
+    // Check for bust immediately
+    if (currentRemaining < 0) {
+      // Bust! Complete turn as bust
+      await Turn.complete(
+        currentTurn.id,
+        0,
+        currentTurn.remaining_before,
+        true
+      );
+      return await GameService.getGameState(gameId);
+    }
+
+    // Check for win immediately
+    if (currentRemaining === 0) {
+      // Win! Complete turn and finish leg
+      await Turn.complete(currentTurn.id, totalScore, 0, false);
+      await GameService.finishLeg(gameId, currentLeg.id, currentPlayer.id);
+      return await GameService.getGameState(gameId);
+    }
+
+    // Check if turn is complete (3 darts thrown)
+    if (dartNumber === 3) {
       await GameService.completeTurn(gameId, currentTurn.id);
     }
 
@@ -228,12 +311,12 @@ export const GameService = {
   completeTurn: async (gameId, turnId) => {
     const turn = await Turn.getById(turnId);
     const game = await Game.getById(gameId);
-    
+
     // Calculate total score
     const darts = [
       { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
       { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
-      { score: turn.dart3_score, multiplier: turn.dart3_multiplier }
+      { score: turn.dart3_score, multiplier: turn.dart3_multiplier },
     ];
 
     let totalScore = 0;
@@ -273,7 +356,7 @@ export const GameService = {
 
     // Check if match is won
     if (hasWonMatch(winner.legs_won, game.best_of)) {
-      await Game.updateStatus(gameId, 'finished', new Date().toISOString());
+      await Game.updateStatus(gameId, "finished", new Date().toISOString());
       return { matchWon: true, winnerId };
     }
 
@@ -289,14 +372,14 @@ export const GameService = {
   undoLastDart: async (gameId) => {
     const game = await Game.getById(gameId);
     if (!game) {
-      throw new Error('Game not found');
+      throw new Error("Game not found");
     }
 
     const currentLeg = await Leg.getCurrentLeg(gameId);
     const lastTurn = await Turn.getLastTurn(currentLeg.id);
 
     if (!lastTurn) {
-      throw new Error('No turns to undo');
+      throw new Error("No turns to undo");
     }
 
     // Determine which dart to remove
@@ -315,8 +398,8 @@ export const GameService = {
 
   // End game prematurely
   endGame: async (gameId) => {
-    await Game.updateStatus(gameId, 'abandoned', new Date().toISOString());
-  }
+    await Game.updateStatus(gameId, "abandoned", new Date().toISOString());
+  },
 };
 
 export default GameService;

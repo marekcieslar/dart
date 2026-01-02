@@ -1,8 +1,8 @@
-import db, { run } from './database.js';
+import db, { run } from "./database.js";
 
 const initDatabase = async () => {
   try {
-    console.log('Initializing database schema...');
+    console.log("Initializing database schema...");
 
     // Create games table
     await run(`
@@ -85,25 +85,30 @@ const initDatabase = async () => {
     console.log('✓ Table "admin_tokens" created');
 
     // Create indexes
-    await run('CREATE INDEX IF NOT EXISTS idx_games_status ON games(status)');
-    await run('CREATE INDEX IF NOT EXISTS idx_game_players_game ON game_players(game_id)');
-    await run('CREATE INDEX IF NOT EXISTS idx_legs_game ON legs(game_id)');
-    await run('CREATE INDEX IF NOT EXISTS idx_turns_leg ON turns(leg_id)');
-    await run('CREATE INDEX IF NOT EXISTS idx_admin_tokens_game ON admin_tokens(game_id)');
-    await run('CREATE INDEX IF NOT EXISTS idx_admin_tokens_token ON admin_tokens(token)');
-    console.log('✓ Indexes created');
+    await run("CREATE INDEX IF NOT EXISTS idx_games_status ON games(status)");
+    await run(
+      "CREATE INDEX IF NOT EXISTS idx_game_players_game ON game_players(game_id)"
+    );
+    await run("CREATE INDEX IF NOT EXISTS idx_legs_game ON legs(game_id)");
+    await run("CREATE INDEX IF NOT EXISTS idx_turns_leg ON turns(leg_id)");
+    await run(
+      "CREATE INDEX IF NOT EXISTS idx_admin_tokens_game ON admin_tokens(game_id)"
+    );
+    await run(
+      "CREATE INDEX IF NOT EXISTS idx_admin_tokens_token ON admin_tokens(token)"
+    );
+    console.log("✓ Indexes created");
 
-    console.log('\n✅ Database schema initialized successfully!');
-    
+    console.log("\n✅ Database schema initialized successfully!");
+
     db.close((err) => {
       if (err) {
-        console.error('Error closing database:', err.message);
+        console.error("Error closing database:", err.message);
       }
       process.exit(0);
     });
-
   } catch (error) {
-    console.error('❌ Error initializing database:', error.message);
+    console.error("❌ Error initializing database:", error.message);
     process.exit(1);
   }
 };

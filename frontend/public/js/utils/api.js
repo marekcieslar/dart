@@ -4,16 +4,16 @@ export const api = {
   // Create game
   createGame: async (type, bestOf, players) => {
     const response = await fetch(`${API_URL}/api/games`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ type, bestOf, players })
+      body: JSON.stringify({ type, bestOf, players }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to create game');
+      throw new Error(error.error || "Failed to create game");
     }
 
     return await response.json();
@@ -22,14 +22,14 @@ export const api = {
   // Get games list
   getGames: async (status = null, page = 1, limit = 10) => {
     const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    params.append('page', page);
-    params.append('limit', limit);
+    if (status) params.append("status", status);
+    params.append("page", page);
+    params.append("limit", limit);
 
     const response = await fetch(`${API_URL}/api/games?${params}`);
-    
+
     if (!response.ok) {
-      throw new Error('Failed to fetch games');
+      throw new Error("Failed to fetch games");
     }
 
     return await response.json();
@@ -38,9 +38,9 @@ export const api = {
   // Get game details
   getGame: async (gameId) => {
     const response = await fetch(`${API_URL}/api/games/${gameId}`);
-    
+
     if (!response.ok) {
-      throw new Error('Game not found');
+      throw new Error("Game not found");
     }
 
     return await response.json();
@@ -51,7 +51,7 @@ export const api = {
     const response = await fetch(
       `${API_URL}/api/games/${gameId}/verify-admin?token=${token}`
     );
-    
+
     if (!response.ok) {
       return { valid: false, isMainAdmin: false };
     }
@@ -62,18 +62,18 @@ export const api = {
   // End game
   endGame: async (gameId, adminToken) => {
     const response = await fetch(`${API_URL}/api/games/${gameId}/end`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ adminToken })
+      body: JSON.stringify({ adminToken }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to end game');
+      throw new Error(error.error || "Failed to end game");
     }
 
     return await response.json();
-  }
+  },
 };

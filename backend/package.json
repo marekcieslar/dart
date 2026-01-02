@@ -9,7 +9,12 @@
     "dev": "node --watch server.js",
     "init-db": "node src/config/initDatabase.js"
   },
-  "keywords": ["dart", "score", "websocket", "real-time"],
+  "keywords": [
+    "dart",
+    "score",
+    "websocket",
+    "real-time"
+  ],
   "author": "Marek",
   "license": "ISC",
   "dependencies": {
