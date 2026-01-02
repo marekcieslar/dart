@@ -6,6 +6,7 @@ const adminToken = getQueryParam("admin");
 let isAdmin = false;
 let socket = null;
 let gameState = null;
+let previousGameState = null; // Track previous state for animations
 
 // Initialize
 const init = async () => {
@@ -30,8 +31,19 @@ const init = async () => {
     });
 
     socket.on("game:update", (data) => {
+      previousGameState = gameState; // Store previous state
       gameState = data;
+
+      // Check for events to animate
+      if (previousGameState) {
+        detectGameEvents(previousGameState, data);
+      }
+
       render();
+
+      // Trigger score animation after render
+      triggerScoreAnimation();
+
       renderHistory(); // Update history on every game update
 
       // Check if game is finished and show summary
@@ -41,14 +53,28 @@ const init = async () => {
     });
 
     socket.on("leg:finished", (data) => {
-      showToast(
-        `${data.winner.name} wygrywa leg ${data.legNumber}!`,
-        "success"
+      showAnimatedToast(
+        `🏆 ${data.winner.name} wygrywa leg ${data.legNumber}!`,
+        "success",
+        3000
       );
+
+      // Add celebration animation to winner's card
+      setTimeout(() => {
+        const scoreboard = document.getElementById("scoreboard");
+        scoreboard.classList.add("win-animation");
+        setTimeout(() => {
+          scoreboard.classList.remove("win-animation");
+        }, 600);
+      }, 100);
     });
 
     socket.on("game:finished", (data) => {
-      showToast(`🏆 ${data.winner.name} wygrywa mecz!`, "success");
+      showAnimatedToast(
+        `🏆 ${data.winner.name} wygrywa mecz!`,
+        "success",
+        4000
+      );
       // Game summary will be shown by game:update event
     });
 
@@ -62,6 +88,94 @@ const init = async () => {
   } catch (error) {
     showError(error.message);
   }
+};
+
+// Detect game events for animations
+const detectGameEvents = (prevState, newState) => {
+  // Player changed
+  if (prevState.currentPlayer !== newState.currentPlayer) {
+    showPlayerChangeAnimation(
+      newState.players[newState.currentPlayer].name,
+      newState.currentPlayer
+    );
+  }
+
+  // Check for BUST in history
+  if (prevState.currentTurn.length > 0 && newState.currentTurn.length === 0) {
+    // Turn ended, check last player's score change
+    const prevPlayer = prevState.players[prevState.currentPlayer];
+    const newPlayer = newState.players.find((p) => p.id === prevPlayer.id);
+
+    if (newPlayer && prevPlayer.currentScore === newPlayer.currentScore) {
+      // Score didn't change = BUST
+      showBustAnimation();
+    }
+  }
+};
+
+// Show player change animation
+const showPlayerChangeAnimation = (playerName, playerIndex) => {
+  showAnimatedToast(`🎯 ${playerName} rzuca!`, "info", 2000);
+
+  // Highlight new player's card - needs to be done after render
+  setTimeout(() => {
+    const cards = document.querySelectorAll("[data-player-index]");
+    cards.forEach((card) => {
+      const index = parseInt(card.getAttribute("data-player-index"));
+      if (index === playerIndex) {
+        card.classList.add("player-change-highlight");
+        setTimeout(() => {
+          card.classList.remove("player-change-highlight");
+        }, 800);
+      }
+    });
+  }, 50); // Small delay to ensure DOM is updated
+};
+
+// Show BUST animation
+const showBustAnimation = () => {
+  showAnimatedToast("💥 BUST!", "error", 2000);
+
+  // Shake the scoreboard
+  const scoreboard = document.getElementById("scoreboard");
+  scoreboard.classList.add("bust-animation");
+  setTimeout(() => {
+    scoreboard.classList.remove("bust-animation");
+  }, 500);
+};
+
+// Trigger score animation
+const triggerScoreAnimation = () => {
+  if (!gameState) return;
+
+  // Find active player's score element
+  const activeCard = document.querySelector(
+    `[data-player-index="${gameState.currentPlayer}"]`
+  );
+  if (activeCard) {
+    const scoreElement = activeCard.querySelector(".score-value");
+    if (scoreElement) {
+      // Remove and re-add class to restart animation
+      scoreElement.classList.remove("bounce-in");
+      // Force reflow
+      void scoreElement.offsetWidth;
+      scoreElement.classList.add("bounce-in");
+    }
+  }
+};
+
+// Animated toast notification
+const showAnimatedToast = (message, type = "info", duration = 3000) => {
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(100%)";
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 };
 
 // Render game
@@ -101,8 +215,8 @@ const renderScoreboard = () => {
 
       return `
       <div class="bg-white rounded-lg shadow-lg p-4 ${
-        isCurrentPlayer ? "ring-4 ring-green-500" : ""
-      }">
+        isCurrentPlayer ? "player-active" : ""
+      }" data-player-index="${idx}">
         <div class="flex justify-between items-start mb-2">
           <div>
             <h2 class="text-xl font-bold ${
@@ -113,7 +227,7 @@ const renderScoreboard = () => {
             <div class="text-sm text-gray-600">Legi: ${player.legsWon}</div>
           </div>
           <div class="text-right">
-            <div class="text-3xl font-bold text-purple-600">${
+            <div class="text-3xl font-bold text-purple-600 score-value">${
               player.currentScore
             }</div>
             <div class="text-xs text-gray-500">pozostało</div>
@@ -447,12 +561,13 @@ const showGameSummary = (data) => {
     .sort((a, b) => b.legsWon - a.legsWon)
     .map((player, index) => {
       const isWinner = player.id === winner.id;
+      const delay = index + 4; // Start after delay-3 elements
       return `
         <div class="flex items-center justify-between p-3 ${
           isWinner
             ? "bg-green-100 border-2 border-green-500"
             : "bg-white border border-gray-200"
-        } rounded-lg">
+        } rounded-lg slide-up delay-${delay}">
           <div class="flex items-center gap-3">
             <div class="text-2xl">${
               index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"
