@@ -586,11 +586,11 @@ pm2 start server.js --name "dart-backend"
 # With custom port (recommended method)
 PORT=3000 pm2 start server.js --name "dart-backend"
 
-# Or using ecosystem.config.js (see below for recommended approach)
-pm2 start ecosystem.config.js --env production
+# Or using ecosystem.config.cjs (see below for recommended approach)
+pm2 start ecosystem.config.cjs --env production
 ```
 
-**Note:** Environment variables in PM2 can be tricky. The recommended approach is to use an `ecosystem.config.js` file or set variables directly in the start command.
+**Note:** Environment variables in PM2 can be tricky. The recommended approach is to use an `ecosystem.config.cjs` file or set variables directly in the start command.
 
 #### Auto-restart on Server Reboot
 
@@ -625,7 +625,7 @@ pm2 restart dart-backend --update-env  # Restart with new environment
 
 The most reliable way to set environment variables in PM2 is using a configuration file.
 
-Create `ecosystem.config.js` in backend directory:
+Create `ecosystem.config.cjs` in backend directory:
 
 ```javascript
 module.exports = {
@@ -650,16 +650,17 @@ Then start with:
 
 ```bash
 cd /home/marek/project/mc-projects/dart/backend
-pm2 start ecosystem.config.js --env production
+pm2 start ecosystem.config.cjs --env production
 pm2 save
 ```
 
-**Why ecosystem.config.js?**
+**Why ecosystem.config.cjs?**
 
 - Environment variables are reliably set
 - Configuration is version-controlled
 - Easy to modify and redeploy
 - Survives server restarts with `pm2 save`
+- Uses `.cjs` extension for CommonJS compatibility with ES modules project
 
 ### Alternative: screen/tmux
 
