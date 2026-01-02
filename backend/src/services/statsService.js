@@ -88,27 +88,27 @@ export const StatsService = {
     if (lastTurn.length > 0) {
       const turn = lastTurn[0];
       const darts = [];
-      
+
       // Add darts that were actually thrown (not null in database)
       if (turn.dart1_score !== null) {
-        darts.push({ 
-          score: turn.dart1_score === -1 ? null : turn.dart1_score, 
-          multiplier: turn.dart1_multiplier 
+        darts.push({
+          score: turn.dart1_score === -1 ? null : turn.dart1_score,
+          multiplier: turn.dart1_multiplier,
         });
       }
       if (turn.dart2_score !== null) {
-        darts.push({ 
-          score: turn.dart2_score === -1 ? null : turn.dart2_score, 
-          multiplier: turn.dart2_multiplier 
+        darts.push({
+          score: turn.dart2_score === -1 ? null : turn.dart2_score,
+          multiplier: turn.dart2_multiplier,
         });
       }
       if (turn.dart3_score !== null) {
-        darts.push({ 
-          score: turn.dart3_score === -1 ? null : turn.dart3_score, 
-          multiplier: turn.dart3_multiplier 
+        darts.push({
+          score: turn.dart3_score === -1 ? null : turn.dart3_score,
+          multiplier: turn.dart3_multiplier,
         });
       }
-      
+
       lastThreeDarts = darts;
     }
 

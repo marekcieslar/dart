@@ -33,6 +33,11 @@ const init = async () => {
       gameState = data;
       render();
       renderHistory(); // Update history on every game update
+
+      // Check if game is finished and show summary
+      if (data.status === "finished") {
+        showGameSummary(data);
+      }
     });
 
     socket.on("leg:finished", (data) => {
@@ -44,6 +49,7 @@ const init = async () => {
 
     socket.on("game:finished", (data) => {
       showToast(`🏆 ${data.winner.name} wygrywa mecz!`, "success");
+      // Game summary will be shown by game:update event
     });
 
     socket.on("game:error", (data) => {
@@ -301,9 +307,7 @@ const renderHistory = async () => {
 
     const historyHTML = displayHistory
       .map((turn) => {
-        const dartsDisplay = turn.darts
-          .map((d) => formatDart(d))
-          .join(", ");
+        const dartsDisplay = turn.darts.map((d) => formatDart(d)).join(", ");
         const scoreChange = turn.remainingBefore - turn.remainingAfter;
         const bustClass = turn.isBust ? "text-red-600 font-bold" : "";
 
@@ -420,6 +424,77 @@ const showError = (message) => {
   document.getElementById("error").textContent = message;
   document.getElementById("error").classList.remove("hidden");
 };
+
+// Show game summary
+const showGameSummary = (data) => {
+  const modal = document.getElementById("summary-modal");
+
+  // Find winner (player with most legs won)
+  const winner = data.players.reduce((prev, current) =>
+    current.legsWon > prev.legsWon ? current : prev
+  );
+
+  // Set winner info
+  document.getElementById("winner-name").textContent = winner.name;
+  document.getElementById("game-info").textContent = `${data.type} • Best of ${
+    data.bestOf
+  } • ${winner.legsWon} - ${
+    data.players.find((p) => p.id !== winner.id).legsWon
+  }`;
+
+  // Generate final scores
+  const scoresHTML = data.players
+    .sort((a, b) => b.legsWon - a.legsWon)
+    .map((player, index) => {
+      const isWinner = player.id === winner.id;
+      return `
+        <div class="flex items-center justify-between p-3 ${
+          isWinner
+            ? "bg-green-100 border-2 border-green-500"
+            : "bg-white border border-gray-200"
+        } rounded-lg">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">${
+              index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"
+            }</div>
+            <div>
+              <div class="font-semibold text-lg ${
+                isWinner ? "text-green-700" : "text-gray-800"
+              }">
+                ${player.name}
+              </div>
+              <div class="text-sm text-gray-600">
+                Średnia: ${player.avgTotal.toFixed(1)} • Legi: ${player.legsWon}
+              </div>
+            </div>
+          </div>
+          ${isWinner ? '<div class="text-3xl">🏆</div>' : ""}
+        </div>
+      `;
+    })
+    .join("");
+
+  document.getElementById("final-scores").innerHTML = scoresHTML;
+
+  // Show modal
+  modal.classList.remove("hidden");
+};
+
+// Summary modal buttons
+document.getElementById("new-game-btn").addEventListener("click", () => {
+  window.location.href = "/";
+});
+
+document.getElementById("home-btn").addEventListener("click", () => {
+  window.location.href = "/";
+});
+
+// Close summary modal on backdrop click
+document.getElementById("summary-modal").addEventListener("click", (e) => {
+  if (e.target.id === "summary-modal") {
+    document.getElementById("summary-modal").classList.add("hidden");
+  }
+});
 
 // Initialize on load
 init();

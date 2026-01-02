@@ -294,8 +294,9 @@ export const GameService = {
     // Check for win immediately (must finish on double for 501 games)
     if (currentRemaining === 0) {
       // For 501 games, must finish with a double; for 301, any finish is valid
-      const isValidFinish = (game.type === 501 && multiplier === 2) || game.type === 301;
-      
+      const isValidFinish =
+        (game.type === 501 && multiplier === 2) || game.type === 301;
+
       if (isValidFinish) {
         // Complete turn and finish leg
         await Turn.complete(currentTurn.id, totalScore, 0, false);
@@ -364,10 +365,11 @@ export const GameService = {
       } else if (turn.dart1_score !== null) {
         lastDartMultiplier = turn.dart1_multiplier;
       }
-      
+
       // For 501 games, must finish with a double; for 301, any finish is valid
-      const isValidFinish = (game.type === 501 && lastDartMultiplier === 2) || game.type === 301;
-      
+      const isValidFinish =
+        (game.type === 501 && lastDartMultiplier === 2) || game.type === 301;
+
       if (isValidFinish) {
         await Turn.complete(turnId, totalScore, 0, false);
         await GameService.finishLeg(gameId, turn.leg_id, turn.player_id);
@@ -459,7 +461,7 @@ export const GameService = {
       const player = players.find((p) => p.id === turn.player_id);
 
       const darts = [];
-      
+
       // Add darts that were actually thrown (not null in database)
       if (turn.dart1_score !== null) {
         darts.push({
