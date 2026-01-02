@@ -563,22 +563,122 @@ NODE_ENV=production PORT=3000 node server.js
 
 HTTPS is handled automatically by the server's reverse proxy.
 
-### Future (PM2)
+### Production Deployment with PM2
+
+PM2 is a production process manager for Node.js applications that keeps your app running continuously, even after terminal disconnect or server restart.
+
+#### Installation
 
 ```bash
-# Install PM2
+# Install PM2 globally
 npm install -g pm2
+```
 
-# Start
-pm2 start server.js --name "dart-app" --env production
+#### Starting the Application
 
-# Auto-restart after reboot
+```bash
+# Navigate to backend directory
+cd /home/marek/project/mc-projects/dart/backend
+
+# Basic start (uses default PORT=3000)
+pm2 start server.js --name "dart-backend"
+
+# With custom port (recommended method)
+PORT=3000 pm2 start server.js --name "dart-backend"
+
+# Or using ecosystem.config.js (see below for recommended approach)
+pm2 start ecosystem.config.js --env production
+```
+
+**Note:** Environment variables in PM2 can be tricky. The recommended approach is to use an `ecosystem.config.js` file or set variables directly in the start command.
+
+#### Auto-restart on Server Reboot
+
+```bash
+# Generate startup script
 pm2 startup
+
+# Save current process list
 pm2 save
+```
+
+#### Useful PM2 Commands
+
+```bash
+# Process management
+pm2 list                    # List all processes
+pm2 restart dart-backend    # Restart application
+pm2 stop dart-backend       # Stop application
+pm2 delete dart-backend     # Remove from PM2
 
 # Monitoring
-pm2 status
-pm2 logs dart-app
+pm2 logs dart-backend       # View logs (real-time)
+pm2 logs dart-backend --lines 100  # Last 100 lines
+pm2 monit                   # Monitor CPU/memory usage
+pm2 status                  # Quick status overview
+
+# Updates after code changes
+pm2 restart dart-backend --update-env  # Restart with new environment
+```
+
+#### PM2 Configuration File (Recommended)
+
+The most reliable way to set environment variables in PM2 is using a configuration file.
+
+Create `ecosystem.config.js` in backend directory:
+
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: "dart-backend",
+      script: "./server.js",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "1G",
+      env_production: {
+        NODE_ENV: "production",
+        PORT: 3000,
+      },
+    },
+  ],
+};
+```
+
+Then start with:
+
+```bash
+cd /home/marek/project/mc-projects/dart/backend
+pm2 start ecosystem.config.js --env production
+pm2 save
+```
+
+**Why ecosystem.config.js?**
+
+- Environment variables are reliably set
+- Configuration is version-controlled
+- Easy to modify and redeploy
+- Survives server restarts with `pm2 save`
+
+### Alternative: screen/tmux
+
+If you prefer a simpler approach without PM2:
+
+```bash
+# Using screen
+screen -S dart-app
+cd /home/marek/project/mc-projects/dart/backend
+npm start
+# Detach: Ctrl+A, then D
+# Reattach: screen -r dart-app
+
+# Using tmux
+tmux new -s dart-app
+cd /home/marek/project/mc-projects/dart/backend
+npm start
+# Detach: Ctrl+B, then D
+# Reattach: tmux attach -t dart-app
 ```
 
 ## 📝 Developer Notes
