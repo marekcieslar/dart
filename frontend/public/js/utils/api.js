@@ -76,4 +76,15 @@ export const api = {
 
     return await response.json();
   },
+
+  // Get turn history
+  getHistory: async (gameId) => {
+    const response = await fetch(`${API_URL}/api/games/${gameId}/history`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch history");
+    }
+
+    return await response.json();
+  },
 };

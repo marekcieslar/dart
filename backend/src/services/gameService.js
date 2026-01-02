@@ -400,6 +400,55 @@ export const GameService = {
   endGame: async (gameId) => {
     await Game.updateStatus(gameId, "abandoned", new Date().toISOString());
   },
+
+  // Get turn history for current leg
+  getTurnHistory: async (gameId) => {
+    const game = await Game.getById(gameId);
+    if (!game) {
+      throw new Error("Game not found");
+    }
+
+    const currentLeg = await Leg.getCurrentLeg(gameId);
+    if (!currentLeg) {
+      throw new Error("No active leg found");
+    }
+
+    const players = await Player.getByGameId(gameId);
+    const turns = await Turn.getByLegId(currentLeg.id);
+
+    // Map turns to history entries with player info
+    const history = turns.map((turn) => {
+      const player = players.find((p) => p.id === turn.player_id);
+
+      const darts = [
+        {
+          score: turn.dart1_score,
+          multiplier: turn.dart1_multiplier,
+        },
+        {
+          score: turn.dart2_score,
+          multiplier: turn.dart2_multiplier,
+        },
+        {
+          score: turn.dart3_score,
+          multiplier: turn.dart3_multiplier,
+        },
+      ].filter((d) => d.score !== null);
+
+      return {
+        turnNumber: turn.turn_number,
+        playerId: player.id,
+        playerName: player.player_name,
+        darts,
+        totalScore: turn.total_score,
+        remainingBefore: turn.remaining_before,
+        remainingAfter: turn.remaining_after,
+        isBust: turn.is_bust === 1,
+      };
+    });
+
+    return history;
+  },
 };
 
 export default GameService;

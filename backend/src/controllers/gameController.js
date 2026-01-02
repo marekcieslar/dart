@@ -130,4 +130,15 @@ router.get("/:id/verify-admin", async (req, res) => {
   }
 });
 
+// Get turn history for current leg
+router.get("/:id/history", async (req, res) => {
+  try {
+    const history = await GameService.getTurnHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    console.error("Error getting history:", error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 export default router;

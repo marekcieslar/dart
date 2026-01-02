@@ -32,6 +32,7 @@ const init = async () => {
     socket.on("game:update", (data) => {
       gameState = data;
       render();
+      renderHistory(); // Update history on every game update
     });
 
     socket.on("leg:finished", (data) => {
@@ -76,6 +77,9 @@ const render = () => {
   if (isAdmin) {
     renderAdminPanel();
   }
+
+  // History
+  renderHistory();
 };
 
 // Render scoreboard
@@ -270,6 +274,81 @@ const formatDart = (dart) => {
 
   const prefix = dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "";
   return `${prefix}${dart.score}`;
+};
+
+// Render history
+let showAllHistory = false;
+
+const renderHistory = async () => {
+  const historyContainer = document.getElementById("history");
+  
+  try {
+    const history = await api.getHistory(gameId);
+    
+    if (history.length === 0) {
+      historyContainer.innerHTML = '<div class="text-gray-500 text-center py-4">No turns yet</div>';
+      return;
+    }
+    
+    // Show only last 10 turns by default, unless showAllHistory is true
+    const displayLimit = showAllHistory ? history.length : 10;
+    const displayHistory = history.slice(-displayLimit);
+    const hasMore = history.length > displayLimit;
+    
+    const historyHTML = displayHistory
+      .map((turn) => {
+        const dartsDisplay = turn.darts.map(d => formatDart(d)).join(", ");
+        const scoreChange = turn.remainingBefore - turn.remainingAfter;
+        const bustClass = turn.isBust ? 'text-red-600 font-bold' : '';
+        
+        return `
+          <div class="flex justify-between items-center p-2 border-b border-gray-200 ${bustClass}">
+            <div class="flex-1">
+              <span class="font-semibold">${turn.playerName}</span>
+              <span class="text-gray-600 ml-2 text-xs md:text-sm">${dartsDisplay}</span>
+            </div>
+            <div class="text-right">
+              <div class="font-bold">${turn.isBust ? 'BUST' : scoreChange}</div>
+              <div class="text-xs text-gray-500">${turn.remainingAfter ?? turn.remainingBefore} left</div>
+            </div>
+          </div>
+        `;
+      })
+      .reverse()
+      .join("");
+    
+    const showMoreButton = !showAllHistory && hasMore
+      ? `<button id="show-more-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show ${history.length - displayLimit} more turns</button>`
+      : showAllHistory && history.length > 10
+      ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show less</button>`
+      : '';
+    
+    historyContainer.innerHTML = historyHTML + showMoreButton;
+    
+    // Add event listeners for show more/less buttons
+    const showMoreBtn = document.getElementById("show-more-history");
+    const showLessBtn = document.getElementById("show-less-history");
+    
+    if (showMoreBtn) {
+      showMoreBtn.addEventListener("click", () => {
+        showAllHistory = true;
+        renderHistory();
+      });
+    }
+    
+    if (showLessBtn) {
+      showLessBtn.addEventListener("click", () => {
+        showAllHistory = false;
+        renderHistory();
+      });
+    }
+    
+    // Auto-scroll to top (latest turns at top after reverse)
+    historyContainer.scrollTop = 0;
+  } catch (error) {
+    console.error("Error loading history:", error);
+    historyContainer.innerHTML = '<div class="text-red-500 text-center py-4">Failed to load history</div>';
+  }
 };
 
 // Copy link
