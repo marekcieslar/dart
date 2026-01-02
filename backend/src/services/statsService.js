@@ -21,9 +21,13 @@ export const StatsService = {
       ];
 
       for (const dart of darts) {
-        if (dart.score !== null) {
+        // Count darts (skip null and -1 which is MISS)
+        if (dart.score !== null && dart.score !== -1) {
           totalDarts++;
           totalPoints += calculateDartValue(dart.score, dart.multiplier);
+        } else if (dart.score === -1) {
+          // MISS counts as a dart thrown but adds 0 points
+          totalDarts++;
         }
       }
     }
@@ -53,9 +57,13 @@ export const StatsService = {
       ];
 
       for (const dart of darts) {
-        if (dart.score !== null) {
+        // Count darts (skip null and -1 which is MISS)
+        if (dart.score !== null && dart.score !== -1) {
           totalDarts++;
           totalPoints += calculateDartValue(dart.score, dart.multiplier);
+        } else if (dart.score === -1) {
+          // MISS counts as a dart thrown but adds 0 points
+          totalDarts++;
         }
       }
     }
@@ -65,7 +73,7 @@ export const StatsService = {
       : 0;
   },
 
-  // Get player statistics for current state
+  // Get player stats
   getPlayerStats: async (gameId, legId, playerId, currentScore) => {
     const legAvg = await StatsService.calculateLegAverage(legId, playerId);
     const matchAvg = await StatsService.calculateMatchAverage(gameId, playerId);
@@ -79,12 +87,29 @@ export const StatsService = {
     let lastThreeDarts = [];
     if (lastTurn.length > 0) {
       const turn = lastTurn[0];
-      const darts = [
-        { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
-        { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
-        { score: turn.dart3_score, multiplier: turn.dart3_multiplier },
-      ];
-      lastThreeDarts = darts.filter((d) => d.score !== null);
+      const darts = [];
+      
+      // Add darts that were actually thrown (not null in database)
+      if (turn.dart1_score !== null) {
+        darts.push({ 
+          score: turn.dart1_score === -1 ? null : turn.dart1_score, 
+          multiplier: turn.dart1_multiplier 
+        });
+      }
+      if (turn.dart2_score !== null) {
+        darts.push({ 
+          score: turn.dart2_score === -1 ? null : turn.dart2_score, 
+          multiplier: turn.dart2_multiplier 
+        });
+      }
+      if (turn.dart3_score !== null) {
+        darts.push({ 
+          score: turn.dart3_score === -1 ? null : turn.dart3_score, 
+          multiplier: turn.dart3_multiplier 
+        });
+      }
+      
+      lastThreeDarts = darts;
     }
 
     return {

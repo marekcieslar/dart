@@ -139,13 +139,8 @@ export const GameService = {
   getCurrentPlayerIndex: async (legId, players) => {
     const turns = await Turn.getByLegId(legId);
 
-    // Count completed turns (all 3 darts thrown)
-    const completedTurns = turns.filter(
-      (t) =>
-        t.dart1_score !== null &&
-        t.dart2_score !== null &&
-        t.dart3_score !== null
-    );
+    // Count completed turns (total_score is set when turn is complete)
+    const completedTurns = turns.filter((t) => t.total_score !== null);
 
     return completedTurns.length % players.length;
   },
@@ -166,13 +161,13 @@ export const GameService = {
     const darts = [];
     if (lastTurn.dart1_score !== null) {
       darts.push({
-        score: lastTurn.dart1_score,
+        score: lastTurn.dart1_score === -1 ? null : lastTurn.dart1_score,
         multiplier: lastTurn.dart1_multiplier,
       });
     }
     if (lastTurn.dart2_score !== null) {
       darts.push({
-        score: lastTurn.dart2_score,
+        score: lastTurn.dart2_score === -1 ? null : lastTurn.dart2_score,
         multiplier: lastTurn.dart2_multiplier,
       });
     }
@@ -197,6 +192,10 @@ export const GameService = {
       throw new Error("Game is not active");
     }
 
+    // Convert MISS (null) to -1 for database storage
+    const dbScore = score === null ? -1 : score;
+    const dbMultiplier = score === null ? 0 : multiplier;
+
     // Validate dart
     const validation = validateDartThrow(score, multiplier);
     if (!validation.valid) {
@@ -217,7 +216,7 @@ export const GameService = {
     const needsNewTurn =
       !currentTurn ||
       currentTurn.player_id !== currentPlayer.id ||
-      currentTurn.dart3_score !== null;
+      currentTurn.total_score !== null;
 
     if (needsNewTurn) {
       const turnNumber = await GameService.getTurnNumber(currentLeg.id);
@@ -247,8 +246,8 @@ export const GameService = {
       throw new Error("Turn is already complete");
     }
 
-    // Update dart
-    await Turn.updateDart(currentTurn.id, dartNumber, score, multiplier);
+    // Update dart with converted score (-1 for MISS, original value otherwise)
+    await Turn.updateDart(currentTurn.id, dartNumber, dbScore, dbMultiplier);
     currentTurn = await Turn.getById(currentTurn.id);
 
     // Calculate current total and remaining score after this dart
@@ -269,7 +268,8 @@ export const GameService = {
 
     let totalScore = 0;
     for (const dart of darts) {
-      if (dart.score !== null) {
+      // Treat -1 (MISS) as 0 points, skip null (not thrown yet)
+      if (dart.score !== null && dart.score !== -1) {
         totalScore += calculateDartValue(dart.score, dart.multiplier);
       }
     }
@@ -281,7 +281,7 @@ export const GameService = {
 
     // Check for bust immediately
     if (currentRemaining < 0) {
-      // Bust! Complete turn as bust
+      // Complete turn as bust
       await Turn.complete(
         currentTurn.id,
         0,
@@ -291,17 +291,35 @@ export const GameService = {
       return await GameService.getGameState(gameId);
     }
 
-    // Check for win immediately
+    // Check for win immediately (must finish on double for 501 games)
     if (currentRemaining === 0) {
-      // Win! Complete turn and finish leg
-      await Turn.complete(currentTurn.id, totalScore, 0, false);
-      await GameService.finishLeg(gameId, currentLeg.id, currentPlayer.id);
-      return await GameService.getGameState(gameId);
+      // For 501 games, must finish with a double; for 301, any finish is valid
+      const isValidFinish = (game.type === 501 && multiplier === 2) || game.type === 301;
+      
+      if (isValidFinish) {
+        // Complete turn and finish leg
+        await Turn.complete(currentTurn.id, totalScore, 0, false);
+        await GameService.finishLeg(gameId, currentLeg.id, currentPlayer.id);
+        return await GameService.getGameState(gameId);
+      } else {
+        // Not a valid finish (didn't hit double in 501) - it's a bust
+        await Turn.complete(
+          currentTurn.id,
+          0,
+          currentTurn.remaining_before,
+          true
+        );
+        return await GameService.getGameState(gameId);
+      }
     }
 
-    // Check if turn is complete (3 darts thrown)
+    // Check if turn is complete (3 darts thrown) and not already completed by bust/win
     if (dartNumber === 3) {
-      await GameService.completeTurn(gameId, currentTurn.id);
+      // Refresh turn data to check if it was already completed
+      const updatedTurn = await Turn.getById(currentTurn.id);
+      if (updatedTurn.total_score === null) {
+        await GameService.completeTurn(gameId, currentTurn.id);
+      }
     }
 
     return await GameService.getGameState(gameId);
@@ -321,7 +339,8 @@ export const GameService = {
 
     let totalScore = 0;
     for (const dart of darts) {
-      if (dart.score !== null) {
+      // Treat -1 (MISS) as 0 points, skip null (not thrown yet)
+      if (dart.score !== null && dart.score !== -1) {
         totalScore += calculateDartValue(dart.score, dart.multiplier);
       }
     }
@@ -334,11 +353,30 @@ export const GameService = {
       return { bust: true, win: false };
     }
 
-    // Check for win
+    // Check for win (must finish on double for 501 games)
     if (remainingAfter === 0) {
-      await Turn.complete(turnId, totalScore, 0, false);
-      await GameService.finishLeg(gameId, turn.leg_id, turn.player_id);
-      return { bust: false, win: true };
+      // Find the last dart thrown to check if it's a double
+      let lastDartMultiplier = null;
+      if (turn.dart3_score !== null) {
+        lastDartMultiplier = turn.dart3_multiplier;
+      } else if (turn.dart2_score !== null) {
+        lastDartMultiplier = turn.dart2_multiplier;
+      } else if (turn.dart1_score !== null) {
+        lastDartMultiplier = turn.dart1_multiplier;
+      }
+      
+      // For 501 games, must finish with a double; for 301, any finish is valid
+      const isValidFinish = (game.type === 501 && lastDartMultiplier === 2) || game.type === 301;
+      
+      if (isValidFinish) {
+        await Turn.complete(turnId, totalScore, 0, false);
+        await GameService.finishLeg(gameId, turn.leg_id, turn.player_id);
+        return { bust: false, win: true };
+      } else {
+        // Not a valid finish (didn't hit double in 501) - it's a bust
+        await Turn.complete(turnId, 0, turn.remaining_before, true);
+        return { bust: true, win: false };
+      }
     }
 
     // Normal turn completion
@@ -420,20 +458,27 @@ export const GameService = {
     const history = turns.map((turn) => {
       const player = players.find((p) => p.id === turn.player_id);
 
-      const darts = [
-        {
-          score: turn.dart1_score,
+      const darts = [];
+      
+      // Add darts that were actually thrown (not null in database)
+      if (turn.dart1_score !== null) {
+        darts.push({
+          score: turn.dart1_score === -1 ? null : turn.dart1_score,
           multiplier: turn.dart1_multiplier,
-        },
-        {
-          score: turn.dart2_score,
+        });
+      }
+      if (turn.dart2_score !== null) {
+        darts.push({
+          score: turn.dart2_score === -1 ? null : turn.dart2_score,
           multiplier: turn.dart2_multiplier,
-        },
-        {
-          score: turn.dart3_score,
+        });
+      }
+      if (turn.dart3_score !== null) {
+        darts.push({
+          score: turn.dart3_score === -1 ? null : turn.dart3_score,
           multiplier: turn.dart3_multiplier,
-        },
-      ].filter((d) => d.score !== null);
+        });
+      }
 
       return {
         turnNumber: turn.turn_number,

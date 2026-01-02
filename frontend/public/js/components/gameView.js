@@ -273,7 +273,7 @@ const undoDart = () => {
 // Format dart for display
 const formatDart = (dart) => {
   if (!dart) return "—";
-  if (dart.score === null) return "MISS";
+  if (dart.score === null) return "0"; // MISS displays as 0
 
   const prefix = dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "";
   return `${prefix}${dart.score}`;
@@ -301,7 +301,9 @@ const renderHistory = async () => {
 
     const historyHTML = displayHistory
       .map((turn) => {
-        const dartsDisplay = turn.darts.map((d) => formatDart(d)).join(", ");
+        const dartsDisplay = turn.darts
+          .map((d) => formatDart(d))
+          .join(", ");
         const scoreChange = turn.remainingBefore - turn.remainingAfter;
         const bustClass = turn.isBust ? "text-red-600 font-bold" : "";
 
