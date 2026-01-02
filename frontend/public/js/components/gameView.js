@@ -7,6 +7,7 @@ let isAdmin = false;
 let socket = null;
 let gameState = null;
 let previousGameState = null; // Track previous state for animations
+let isFirstUpdate = true; // Track if this is the first game update
 
 // Initialize
 const init = async () => {
@@ -47,9 +48,13 @@ const init = async () => {
       renderHistory(); // Update history on every game update
 
       // Check if game is finished and show summary
-      if (data.status === "finished") {
+      // Only show if this is NOT the first update (to avoid showing modal when viewing historical games)
+      if (data.status === "finished" && !isFirstUpdate) {
         showGameSummary(data);
       }
+
+      // After first update, set flag to false
+      isFirstUpdate = false;
     });
 
     socket.on("leg:finished", (data) => {
@@ -201,61 +206,90 @@ const render = () => {
     renderAdminPanel();
   }
 
-  // History
-  renderHistory();
+  // History - hide for finished games
+  const historySection = document.querySelector("#history").parentElement;
+  if (gameState.status === "finished") {
+    historySection.classList.add("hidden");
+  } else {
+    historySection.classList.remove("hidden");
+    renderHistory();
+  }
 };
 
 // Render scoreboard
 const renderScoreboard = () => {
   const scoreboard = document.getElementById("scoreboard");
 
+  // Find winner if game is finished
+  const winner =
+    gameState.status === "finished"
+      ? gameState.players.reduce((prev, current) =>
+          current.legsWon > prev.legsWon ? current : prev
+        )
+      : null;
+
   scoreboard.innerHTML = gameState.players
     .map((player, idx) => {
       const isCurrentPlayer = idx === gameState.currentPlayer;
+      const isWinner = winner && player.id === winner.id;
 
       return `
       <div class="bg-white rounded-lg shadow-lg p-4 ${
-        isCurrentPlayer ? "player-active" : ""
+        isCurrentPlayer && gameState.status !== "finished"
+          ? "player-active"
+          : ""
+      } ${
+        isWinner ? "border-4 border-yellow-400 bg-yellow-50" : ""
       }" data-player-index="${idx}">
         <div class="flex justify-between items-start mb-2">
           <div>
             <h2 class="text-xl font-bold ${
-              isCurrentPlayer ? "text-green-600" : "text-gray-800"
+              isWinner
+                ? "text-yellow-600"
+                : isCurrentPlayer
+                ? "text-green-600"
+                : "text-gray-800"
             }">
-              ${isCurrentPlayer ? "⭐ " : ""}${player.name}
+              ${
+                isWinner
+                  ? "🏆 "
+                  : isCurrentPlayer && gameState.status !== "finished"
+                  ? "⭐ "
+                  : ""
+              }${player.name}
             </h2>
             <div class="text-sm text-gray-600">Legi: ${player.legsWon}</div>
           </div>
+          ${
+            gameState.status !== "finished"
+              ? `
           <div class="text-right">
-            <div class="text-3xl font-bold text-purple-600 score-value">${
-              player.currentScore
-            }</div>
+            <div class="text-3xl font-bold text-purple-600 score-value">${player.currentScore}</div>
             <div class="text-xs text-gray-500">pozostało</div>
           </div>
+          `
+              : ""
+          }
         </div>
         
-        <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="${
+          gameState.status === "finished" ? "" : "grid grid-cols-2 gap-2"
+        } text-sm">
+          ${
+            gameState.status !== "finished"
+              ? `
           <div>
             <span class="text-gray-600">Śr. leg:</span>
             <span class="font-semibold">${player.avgThisLeg.toFixed(1)}</span>
           </div>
+          `
+              : ""
+          }
           <div>
             <span class="text-gray-600">Śr. mecz:</span>
             <span class="font-semibold">${player.avgTotal.toFixed(1)}</span>
           </div>
         </div>
-
-        ${
-          player.lastThreeDarts && player.lastThreeDarts.length > 0
-            ? `
-          <div class="mt-2 text-xs text-gray-500">
-            Ostatnie: ${player.lastThreeDarts
-              .map((d) => formatDart(d))
-              .join(", ")}
-          </div>
-        `
-            : ""
-        }
       </div>
     `;
     })
