@@ -1,0 +1,322 @@
+import { v4 as uuidv4 } from 'uuid';
+import Game from '../models/Game.js';
+import Player from '../models/Player.js';
+import Leg from '../models/Leg.js';
+import Turn from '../models/Turn.js';
+import StatsService from './statsService.js';
+import { 
+  getStartingScore, 
+  calculateDartValue, 
+  isBust, 
+  isWin, 
+  formatDart,
+  hasWonMatch 
+} from '../utils/gameLogic.js';
+import {
+  isValidGameType,
+  isValidBestOf,
+  validatePlayerNames,
+  validateDartThrow
+} from '../utils/validators.js';
+
+export const GameService = {
+  // Create new game
+  createGame: async (type, bestOf, playerNames) => {
+    // Validate input
+    if (!isValidGameType(type)) {
+      throw new Error('Invalid game type. Must be 301 or 501');
+    }
+
+    if (!isValidBestOf(bestOf)) {
+      throw new Error('Invalid best of. Must be 3, 5, or 7');
+    }
+
+    const validation = validatePlayerNames(playerNames);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    // Create game
+    const adminToken = uuidv4();
+    const gameId = await Game.create(type, bestOf, adminToken);
+
+    // Create players
+    for (let i = 0; i < playerNames.length; i++) {
+      await Player.create(gameId, playerNames[i], i);
+    }
+
+    // Create first leg
+    await Leg.create(gameId, 1);
+
+    return {
+      gameId,
+      adminToken
+    };
+  },
+
+  // Get full game state
+  getGameState: async (gameId) => {
+    const game = await Game.getById(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const players = await Player.getByGameId(gameId);
+    const currentLeg = await Leg.getCurrentLeg(gameId);
+    
+    if (!currentLeg) {
+      throw new Error('No active leg found');
+    }
+
+    // Get current scores for each player
+    const playerStates = [];
+    for (const player of players) {
+      const currentScore = await GameService.getPlayerCurrentScore(currentLeg.id, player.id, game.type);
+      const stats = await StatsService.getPlayerStats(gameId, currentLeg.id, player.id, currentScore);
+      
+      playerStates.push({
+        id: player.id,
+        name: player.player_name,
+        order: player.player_order,
+        legsWon: player.legs_won,
+        ...stats
+      });
+    }
+
+    // Get current player turn
+    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(currentLeg.id, players);
+    
+    // Get current turn (incomplete darts)
+    const currentTurn = await GameService.getCurrentTurnDarts(currentLeg.id, players[currentPlayerIndex].id);
+
+    return {
+      id: game.id,
+      type: game.type,
+      bestOf: game.best_of,
+      status: game.status,
+      createdAt: game.created_at,
+      finishedAt: game.finished_at,
+      currentLeg: currentLeg.leg_number,
+      currentPlayer: currentPlayerIndex,
+      players: playerStates,
+      currentTurn,
+      turnNumber: await GameService.getTurnNumber(currentLeg.id)
+    };
+  },
+
+  // Get player's current score in leg
+  getPlayerCurrentScore: async (legId, playerId, gameType) => {
+    const turns = await Turn.getByLegId(legId);
+    const startingScore = getStartingScore(gameType);
+    
+    let score = startingScore;
+    
+    for (const turn of turns) {
+      if (turn.player_id === playerId && !turn.is_bust) {
+        score = turn.remaining_after;
+      }
+    }
+    
+    return score;
+  },
+
+  // Get current player index (whose turn it is)
+  getCurrentPlayerIndex: async (legId, players) => {
+    const turns = await Turn.getByLegId(legId);
+    
+    // Count completed turns (all 3 darts thrown)
+    const completedTurns = turns.filter(t => 
+      t.dart1_score !== null && 
+      t.dart2_score !== null && 
+      t.dart3_score !== null
+    );
+
+    return completedTurns.length % players.length;
+  },
+
+  // Get current turn's darts (incomplete turn)
+  getCurrentTurnDarts: async (legId, playerId) => {
+    const lastTurn = await Turn.getLastTurn(legId);
+    
+    if (!lastTurn || lastTurn.player_id !== playerId) {
+      return [];
+    }
+
+    // Check if turn is incomplete
+    if (lastTurn.dart3_score !== null) {
+      return [];
+    }
+
+    const darts = [];
+    if (lastTurn.dart1_score !== null) {
+      darts.push(formatDart(lastTurn.dart1_score, lastTurn.dart1_multiplier));
+    }
+    if (lastTurn.dart2_score !== null) {
+      darts.push(formatDart(lastTurn.dart2_score, lastTurn.dart2_multiplier));
+    }
+    
+    return darts;
+  },
+
+  // Get turn number
+  getTurnNumber: async (legId) => {
+    const turns = await Turn.getByLegId(legId);
+    return turns.length + 1;
+  },
+
+  // Add dart to current turn
+  addDart: async (gameId, score, multiplier) => {
+    const game = await Game.getById(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    if (game.status !== 'active') {
+      throw new Error('Game is not active');
+    }
+
+    // Validate dart
+    const validation = validateDartThrow(score, multiplier);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    const currentLeg = await Leg.getCurrentLeg(gameId);
+    const players = await Player.getByGameId(gameId);
+    const currentPlayerIndex = await GameService.getCurrentPlayerIndex(currentLeg.id, players);
+    const currentPlayer = players[currentPlayerIndex];
+
+    // Get or create current turn
+    let currentTurn = await Turn.getLastTurn(currentLeg.id);
+    
+    const needsNewTurn = !currentTurn || 
+                        currentTurn.player_id !== currentPlayer.id || 
+                        currentTurn.dart3_score !== null;
+
+    if (needsNewTurn) {
+      const turnNumber = await GameService.getTurnNumber(currentLeg.id);
+      const remainingBefore = await GameService.getPlayerCurrentScore(currentLeg.id, currentPlayer.id, game.type);
+      const turnId = await Turn.create(currentLeg.id, currentPlayer.id, turnNumber, remainingBefore);
+      currentTurn = await Turn.getById(turnId);
+    }
+
+    // Determine which dart to update
+    let dartNumber;
+    if (currentTurn.dart1_score === null) {
+      dartNumber = 1;
+    } else if (currentTurn.dart2_score === null) {
+      dartNumber = 2;
+    } else if (currentTurn.dart3_score === null) {
+      dartNumber = 3;
+    } else {
+      throw new Error('Turn is already complete');
+    }
+
+    // Update dart
+    await Turn.updateDart(currentTurn.id, dartNumber, score, multiplier);
+    currentTurn = await Turn.getById(currentTurn.id);
+
+    // Check if turn is complete
+    if (dartNumber === 3 || score === null) {
+      await GameService.completeTurn(gameId, currentTurn.id);
+    }
+
+    return await GameService.getGameState(gameId);
+  },
+
+  // Complete turn and check for bust/win
+  completeTurn: async (gameId, turnId) => {
+    const turn = await Turn.getById(turnId);
+    const game = await Game.getById(gameId);
+    
+    // Calculate total score
+    const darts = [
+      { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
+      { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
+      { score: turn.dart3_score, multiplier: turn.dart3_multiplier }
+    ];
+
+    let totalScore = 0;
+    for (const dart of darts) {
+      if (dart.score !== null) {
+        totalScore += calculateDartValue(dart.score, dart.multiplier);
+      }
+    }
+
+    const remainingAfter = turn.remaining_before - totalScore;
+
+    // Check for bust
+    if (remainingAfter < 0) {
+      await Turn.complete(turnId, 0, turn.remaining_before, true);
+      return { bust: true, win: false };
+    }
+
+    // Check for win
+    if (remainingAfter === 0) {
+      await Turn.complete(turnId, totalScore, 0, false);
+      await GameService.finishLeg(gameId, turn.leg_id, turn.player_id);
+      return { bust: false, win: true };
+    }
+
+    // Normal turn completion
+    await Turn.complete(turnId, totalScore, remainingAfter, false);
+    return { bust: false, win: false };
+  },
+
+  // Finish leg
+  finishLeg: async (gameId, legId, winnerId) => {
+    await Leg.finish(legId, winnerId);
+    await Player.incrementLegsWon(winnerId);
+
+    const game = await Game.getById(gameId);
+    const winner = await Player.getById(winnerId);
+
+    // Check if match is won
+    if (hasWonMatch(winner.legs_won, game.best_of)) {
+      await Game.updateStatus(gameId, 'finished', new Date().toISOString());
+      return { matchWon: true, winnerId };
+    }
+
+    // Start new leg
+    const legs = await Leg.getByGameId(gameId);
+    const newLegNumber = legs.length + 1;
+    await Leg.create(gameId, newLegNumber);
+
+    return { matchWon: false, winnerId, newLegNumber };
+  },
+
+  // Undo last dart
+  undoLastDart: async (gameId) => {
+    const game = await Game.getById(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const currentLeg = await Leg.getCurrentLeg(gameId);
+    const lastTurn = await Turn.getLastTurn(currentLeg.id);
+
+    if (!lastTurn) {
+      throw new Error('No turns to undo');
+    }
+
+    // Determine which dart to remove
+    if (lastTurn.dart3_score !== null) {
+      await Turn.updateDart(lastTurn.id, 3, null, null);
+    } else if (lastTurn.dart2_score !== null) {
+      await Turn.updateDart(lastTurn.id, 2, null, null);
+    } else if (lastTurn.dart1_score !== null) {
+      await Turn.updateDart(lastTurn.id, 1, null, null);
+      // If first dart is removed, delete the turn
+      await Turn.delete(lastTurn.id);
+    }
+
+    return await GameService.getGameState(gameId);
+  },
+
+  // End game prematurely
+  endGame: async (gameId) => {
+    await Game.updateStatus(gameId, 'abandoned', new Date().toISOString());
+  }
+};
+
+export default GameService;
