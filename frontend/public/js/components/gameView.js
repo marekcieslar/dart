@@ -36,11 +36,14 @@ const init = async () => {
     });
 
     socket.on("leg:finished", (data) => {
-      showToast(`${data.winner.name} wins leg ${data.legNumber}!`, "success");
+      showToast(
+        `${data.winner.name} wygrywa leg ${data.legNumber}!`,
+        "success"
+      );
     });
 
     socket.on("game:finished", (data) => {
-      showToast(`🏆 ${data.winner.name} wins the match!`, "success");
+      showToast(`🏆 ${data.winner.name} wygrywa mecz!`, "success");
     });
 
     socket.on("game:error", (data) => {
@@ -101,23 +104,23 @@ const renderScoreboard = () => {
             }">
               ${isCurrentPlayer ? "⭐ " : ""}${player.name}
             </h2>
-            <div class="text-sm text-gray-600">Legs won: ${player.legsWon}</div>
+            <div class="text-sm text-gray-600">Legi: ${player.legsWon}</div>
           </div>
           <div class="text-right">
             <div class="text-3xl font-bold text-purple-600">${
               player.currentScore
             }</div>
-            <div class="text-xs text-gray-500">remaining</div>
+            <div class="text-xs text-gray-500">pozostało</div>
           </div>
         </div>
         
         <div class="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <span class="text-gray-600">Leg avg:</span>
+            <span class="text-gray-600">Śr. leg:</span>
             <span class="font-semibold">${player.avgThisLeg.toFixed(1)}</span>
           </div>
           <div>
-            <span class="text-gray-600">Match avg:</span>
+            <span class="text-gray-600">Śr. mecz:</span>
             <span class="font-semibold">${player.avgTotal.toFixed(1)}</span>
           </div>
         </div>
@@ -126,7 +129,9 @@ const renderScoreboard = () => {
           player.lastThreeDarts && player.lastThreeDarts.length > 0
             ? `
           <div class="mt-2 text-xs text-gray-500">
-            Last: ${player.lastThreeDarts.map((d) => formatDart(d)).join(", ")}
+            Ostatnie: ${player.lastThreeDarts
+              .map((d) => formatDart(d))
+              .join(", ")}
           </div>
         `
             : ""
@@ -153,9 +158,8 @@ const renderAdminPanel = () => {
 
   panel.innerHTML = `
     <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white">
-      <h3 class="font-bold text-lg mb-3">Admin Panel</h3>
       <div class="bg-white/20 rounded p-2 mb-3 text-center">
-        <div class="text-sm">Current turn: <span class="font-bold">${
+        <div class="text-sm">Rzuca: <span class="font-bold">${
           currentPlayer.name
         }</span></div>
         <div class="text-2xl font-bold mt-1">${displayTurn}</div>
@@ -163,7 +167,6 @@ const renderAdminPanel = () => {
 
       <!-- Multiplier -->
       <div class="mb-3">
-        <div class="text-sm mb-2">Multiplier:</div>
         <div class="grid grid-cols-3 gap-2">
           <button class="multiplier-btn bg-white/90 hover:bg-white text-green-600 font-bold py-2 rounded active" data-multiplier="1">
             1x
@@ -195,7 +198,7 @@ const renderAdminPanel = () => {
 
       <!-- Undo button -->
       <button id="undo-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded">
-        ← Undo Last Dart
+        ← Cofnij
       </button>
     </div>
   `;
@@ -231,7 +234,7 @@ const setupAdminHandlers = () => {
 
       // Validate
       if (score === 25 && multiplier === 3) {
-        showToast("Bull cannot be tripled", "error");
+        showToast("Bull nie może być triple", "error");
         return;
       }
 
@@ -287,7 +290,7 @@ const renderHistory = async () => {
 
     if (history.length === 0) {
       historyContainer.innerHTML =
-        '<div class="text-gray-500 text-center py-4">No turns yet</div>';
+        '<div class="text-gray-500 text-center py-4">Brak historii</div>';
       return;
     }
 
@@ -312,7 +315,7 @@ const renderHistory = async () => {
               <div class="font-bold">${turn.isBust ? "BUST" : scoreChange}</div>
               <div class="text-xs text-gray-500">${
                 turn.remainingAfter ?? turn.remainingBefore
-              } left</div>
+              } pkt</div>
             </div>
           </div>
         `;
@@ -322,11 +325,11 @@ const renderHistory = async () => {
 
     const showMoreButton =
       !showAllHistory && hasMore
-        ? `<button id="show-more-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show ${
+        ? `<button id="show-more-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Pokaż ${
             history.length - displayLimit
-          } more turns</button>`
+          } więcej</button>`
         : showAllHistory && history.length > 10
-        ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Show less</button>`
+        ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Pokaż mniej</button>`
         : "";
 
     historyContainer.innerHTML = historyHTML + showMoreButton;
@@ -354,7 +357,7 @@ const renderHistory = async () => {
   } catch (error) {
     console.error("Error loading history:", error);
     historyContainer.innerHTML =
-      '<div class="text-red-500 text-center py-4">Failed to load history</div>';
+      '<div class="text-red-500 text-center py-4">Błąd ładowania historii</div>';
   }
 };
 
@@ -369,7 +372,7 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
       window.location.origin + window.location.pathname + "?id=" + gameId;
     const success = await copyToClipboard(link);
     if (success) {
-      showToast("Link copied!", "success");
+      showToast("Link skopiowany!", "success");
     }
   }
 });
@@ -381,7 +384,7 @@ document
     const adminLink = window.location.href; // Full URL with admin token
     const success = await copyToClipboard(adminLink);
     if (success) {
-      showToast("Admin link copied!", "success");
+      showToast("Link admina skopiowany!", "success");
     }
     document.getElementById("copy-modal").classList.add("hidden");
   });
@@ -393,7 +396,7 @@ document
       window.location.origin + window.location.pathname + "?id=" + gameId;
     const success = await copyToClipboard(viewLink);
     if (success) {
-      showToast("View-only link copied!", "success");
+      showToast("Link do oglądania skopiowany!", "success");
     }
     document.getElementById("copy-modal").classList.add("hidden");
   });

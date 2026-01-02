@@ -36,14 +36,14 @@ document.getElementById("add-player-btn").addEventListener("click", () => {
   const currentCount = playersList.querySelectorAll(".player-input").length;
 
   if (currentCount >= 8) {
-    showToast("Maximum 8 players allowed", "error");
+    showToast("Maksymalnie 8 graczy", "error");
     return;
   }
 
   const input = document.createElement("input");
   input.type = "text";
   input.className = "player-input w-full px-4 py-2 border rounded-lg";
-  input.placeholder = `Player ${currentCount + 1}`;
+  input.placeholder = `Gracz ${currentCount + 1}`;
   input.required = true;
 
   playersList.appendChild(input);
@@ -61,12 +61,12 @@ document
       .filter((name) => name.length > 0);
 
     if (players.length < 2) {
-      showToast("At least 2 players required", "error");
+      showToast("Wymagani co najmniej 2 gracze", "error");
       return;
     }
 
     if (players.length !== new Set(players).size) {
-      showToast("Player names must be unique", "error");
+      showToast("Imiona graczy muszą być unikalne", "error");
       return;
     }
 
@@ -76,7 +76,7 @@ document
         selectedBestOf,
         players
       );
-      showToast("Game created!", "success");
+      showToast("Gra utworzona!", "success");
 
       // Redirect to game with admin token
       setTimeout(() => {

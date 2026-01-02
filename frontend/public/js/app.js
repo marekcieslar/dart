@@ -13,7 +13,7 @@ const loadGames = async (status, page, containerId, paginationId) => {
 
     if (data.games.length === 0) {
       container.innerHTML =
-        '<div class="text-center text-gray-500 py-8">No games found</div>';
+        '<div class="text-center text-gray-500 py-8">Brak gier</div>';
       return;
     }
 
@@ -28,7 +28,7 @@ const loadGames = async (status, page, containerId, paginationId) => {
             <div class="font-bold text-lg">${game.type} • ${game.players.join(
           " vs "
         )}</div>
-            <div class="text-sm text-gray-600">Score: ${game.currentScore}</div>
+            <div class="text-sm text-gray-600">Wynik: ${game.currentScore}</div>
             <div class="text-xs text-gray-500">${formatDate(
               game.createdAt
             )}</div>
@@ -68,7 +68,7 @@ const loadGames = async (status, page, containerId, paginationId) => {
   } catch (error) {
     console.error("Error loading games:", error);
     container.innerHTML =
-      '<div class="text-center text-red-500 py-8">Error loading games</div>';
+      '<div class="text-center text-red-500 py-8">Błąd ładowania gier</div>';
   }
 };
 

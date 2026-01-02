@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Game - Dart Score</title>
+    <title>Gra - Dart Score</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <style>
@@ -19,26 +19,26 @@
       <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
         <div class="flex justify-between items-center">
           <a href="index.html" class="text-purple-600 hover:text-purple-800"
-            >← Back</a
+            >← Wróć</a
           >
           <div class="text-center flex-1">
             <h1 class="text-2xl font-bold text-purple-600" id="game-title">
-              Game
+              Gra
             </h1>
-            <p class="text-sm text-gray-600" id="game-subtitle">Loading...</p>
+            <p class="text-sm text-gray-600" id="game-subtitle">Ładowanie...</p>
           </div>
           <button
             id="copy-link-btn"
             class="text-purple-600 hover:text-purple-800 text-sm"
           >
-            📋 Copy
+            📋 Kopiuj
           </button>
         </div>
       </div>
 
       <!-- Loading -->
       <div id="loading" class="bg-white rounded-lg shadow-lg p-8 text-center">
-        <div class="animate-pulse">Loading game...</div>
+        <div class="animate-pulse">Ładowanie gry...</div>
       </div>
 
       <!-- Game Content -->
@@ -51,7 +51,6 @@
 
         <!-- History -->
         <div class="bg-white rounded-lg shadow-lg p-4">
-          <h3 class="font-bold text-lg mb-2">Turn History</h3>
           <div
             id="history"
             class="space-y-2 overflow-y-auto text-sm"
@@ -72,26 +71,28 @@
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       >
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 class="text-xl font-bold text-gray-800 mb-4">Copy Link</h3>
-          <p class="text-sm text-gray-600 mb-4">Choose which link to copy:</p>
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Kopiuj link</h3>
+          <p class="text-sm text-gray-600 mb-4">
+            Wybierz, który link skopiować:
+          </p>
           <div class="space-y-3">
             <button
               id="copy-admin-link"
               class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition"
             >
-              🔑 Admin Link (with edit access)
+              🔑 Link admina (z możliwością edycji)
             </button>
             <button
               id="copy-view-link"
               class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition"
             >
-              👁️ View-Only Link
+              👁️ Link do oglądania
             </button>
             <button
               id="close-modal"
               class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition"
             >
-              Cancel
+              Anuluj
             </button>
           </div>
         </div>
