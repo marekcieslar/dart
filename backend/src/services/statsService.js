@@ -9,11 +9,14 @@ export const StatsService = {
       [legId, playerId]
     );
 
+    if (turns.length === 0) {
+      return 0;
+    }
+
     let totalPoints = 0;
-    let totalDarts = 0;
 
     for (const turn of turns) {
-      // Count darts thrown (non-null scores)
+      // Sum up points from all darts in the turn
       const darts = [
         { score: turn.dart1_score, multiplier: turn.dart1_multiplier },
         { score: turn.dart2_score, multiplier: turn.dart2_multiplier },
@@ -21,20 +24,15 @@ export const StatsService = {
       ];
 
       for (const dart of darts) {
-        // Count darts (skip null and -1 which is MISS)
+        // Skip null and -1 (MISS = 0 points)
         if (dart.score !== null && dart.score !== -1) {
-          totalDarts++;
           totalPoints += calculateDartValue(dart.score, dart.multiplier);
-        } else if (dart.score === -1) {
-          // MISS counts as a dart thrown but adds 0 points
-          totalDarts++;
         }
       }
     }
 
-    return totalDarts > 0
-      ? Math.round((totalPoints / totalDarts) * 100) / 100
-      : 0;
+    // Average per turn (not per dart)
+    return Math.round((totalPoints / turns.length) * 100) / 100;
   },
 
   // Calculate average for a player across all legs in game
@@ -46,8 +44,11 @@ export const StatsService = {
       [gameId, playerId]
     );
 
+    if (turns.length === 0) {
+      return 0;
+    }
+
     let totalPoints = 0;
-    let totalDarts = 0;
 
     for (const turn of turns) {
       const darts = [
@@ -57,20 +58,15 @@ export const StatsService = {
       ];
 
       for (const dart of darts) {
-        // Count darts (skip null and -1 which is MISS)
+        // Skip null and -1 (MISS = 0 points)
         if (dart.score !== null && dart.score !== -1) {
-          totalDarts++;
           totalPoints += calculateDartValue(dart.score, dart.multiplier);
-        } else if (dart.score === -1) {
-          // MISS counts as a dart thrown but adds 0 points
-          totalDarts++;
         }
       }
     }
 
-    return totalDarts > 0
-      ? Math.round((totalPoints / totalDarts) * 100) / 100
-      : 0;
+    // Average per turn (not per dart)
+    return Math.round((totalPoints / turns.length) * 100) / 100;
   },
 
   // Get player stats
