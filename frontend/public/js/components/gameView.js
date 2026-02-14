@@ -1,8 +1,13 @@
-import { api } from "../utils/api.js";
-import { getQueryParam, copyToClipboard, showToast } from "../utils/helpers.js";
+import { api } from '../utils/api.js';
+import {
+  getQueryParam,
+  copyToClipboard,
+  showToast,
+  getBasePath,
+} from '../utils/helpers.js';
 
-const gameId = getQueryParam("id");
-const adminToken = getQueryParam("admin");
+const gameId = getQueryParam('id');
+const adminToken = getQueryParam('admin');
 let isAdmin = false;
 let socket = null;
 let gameState = null;
@@ -12,7 +17,7 @@ let isFirstUpdate = true; // Track if this is the first game update
 // Initialize
 const init = async () => {
   if (!gameId) {
-    showError("No game ID provided");
+    showError('No game ID provided');
     return;
   }
 
@@ -26,12 +31,12 @@ const init = async () => {
     // Connect to socket
     socket = io(window.location.origin);
 
-    socket.on("connect", () => {
-      console.log("Connected to server");
-      socket.emit("join:game", { gameId, adminToken });
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      socket.emit('join:game', { gameId, adminToken });
     });
 
-    socket.on("game:update", (data) => {
+    socket.on('game:update', (data) => {
       previousGameState = gameState; // Store previous state
       gameState = data;
 
@@ -49,7 +54,7 @@ const init = async () => {
 
       // Check if game is finished and show summary
       // Only show if this is NOT the first update (to avoid showing modal when viewing historical games)
-      if (data.status === "finished" && !isFirstUpdate) {
+      if (data.status === 'finished' && !isFirstUpdate) {
         showGameSummary(data);
       }
 
@@ -57,38 +62,38 @@ const init = async () => {
       isFirstUpdate = false;
     });
 
-    socket.on("leg:finished", (data) => {
+    socket.on('leg:finished', (data) => {
       showAnimatedToast(
         `🏆 ${data.winner.name} wygrywa leg ${data.legNumber}!`,
-        "success",
+        'success',
         3000
       );
 
       // Add celebration animation to winner's card
       setTimeout(() => {
-        const scoreboard = document.getElementById("scoreboard");
-        scoreboard.classList.add("win-animation");
+        const scoreboard = document.getElementById('scoreboard');
+        scoreboard.classList.add('win-animation');
         setTimeout(() => {
-          scoreboard.classList.remove("win-animation");
+          scoreboard.classList.remove('win-animation');
         }, 600);
       }, 100);
     });
 
-    socket.on("game:finished", (data) => {
+    socket.on('game:finished', (data) => {
       showAnimatedToast(
         `🏆 ${data.winner.name} wygrywa mecz!`,
-        "success",
+        'success',
         4000
       );
       // Game summary will be shown by game:update event
     });
 
-    socket.on("game:error", (data) => {
-      showToast(data.message, "error");
+    socket.on('game:error', (data) => {
+      showToast(data.message, 'error');
     });
 
-    socket.on("disconnect", () => {
-      console.log("Disconnected from server");
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
     });
   } catch (error) {
     showError(error.message);
@@ -120,17 +125,17 @@ const detectGameEvents = (prevState, newState) => {
 
 // Show player change animation
 const showPlayerChangeAnimation = (playerName, playerIndex) => {
-  showAnimatedToast(`🎯 ${playerName} rzuca!`, "info", 2000);
+  showAnimatedToast(`🎯 ${playerName} rzuca!`, 'info', 2000);
 
   // Highlight new player's card - needs to be done after render
   setTimeout(() => {
-    const cards = document.querySelectorAll("[data-player-index]");
+    const cards = document.querySelectorAll('[data-player-index]');
     cards.forEach((card) => {
-      const index = parseInt(card.getAttribute("data-player-index"));
+      const index = parseInt(card.getAttribute('data-player-index'));
       if (index === playerIndex) {
-        card.classList.add("player-change-highlight");
+        card.classList.add('player-change-highlight');
         setTimeout(() => {
-          card.classList.remove("player-change-highlight");
+          card.classList.remove('player-change-highlight');
         }, 800);
       }
     });
@@ -139,13 +144,13 @@ const showPlayerChangeAnimation = (playerName, playerIndex) => {
 
 // Show BUST animation
 const showBustAnimation = () => {
-  showAnimatedToast("💥 BUST!", "error", 2000);
+  showAnimatedToast('💥 BUST!', 'error', 2000);
 
   // Shake the scoreboard
-  const scoreboard = document.getElementById("scoreboard");
-  scoreboard.classList.add("bust-animation");
+  const scoreboard = document.getElementById('scoreboard');
+  scoreboard.classList.add('bust-animation');
   setTimeout(() => {
-    scoreboard.classList.remove("bust-animation");
+    scoreboard.classList.remove('bust-animation');
   }, 500);
 };
 
@@ -158,27 +163,27 @@ const triggerScoreAnimation = () => {
     `[data-player-index="${gameState.currentPlayer}"]`
   );
   if (activeCard) {
-    const scoreElement = activeCard.querySelector(".score-value");
+    const scoreElement = activeCard.querySelector('.score-value');
     if (scoreElement) {
       // Remove and re-add class to restart animation
-      scoreElement.classList.remove("bounce-in");
+      scoreElement.classList.remove('bounce-in');
       // Force reflow
       void scoreElement.offsetWidth;
-      scoreElement.classList.add("bounce-in");
+      scoreElement.classList.add('bounce-in');
     }
   }
 };
 
 // Animated toast notification
-const showAnimatedToast = (message, type = "info", duration = 3000) => {
-  const toast = document.createElement("div");
+const showAnimatedToast = (message, type = 'info', duration = 3000) => {
+  const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
   document.body.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transform = "translateX(100%)";
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
     setTimeout(() => toast.remove(), 300);
   }, duration);
 };
@@ -187,16 +192,14 @@ const showAnimatedToast = (message, type = "info", duration = 3000) => {
 const render = () => {
   if (!gameState) return;
 
-  document.getElementById("loading").classList.add("hidden");
-  document.getElementById("game-content").classList.remove("hidden");
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('game-content').classList.remove('hidden');
 
   // Header
-  document.getElementById(
-    "game-title"
-  ).textContent = `${gameState.type} • Leg ${gameState.currentLeg}/${gameState.bestOf}`;
-  document.getElementById(
-    "game-subtitle"
-  ).textContent = `Best of ${gameState.bestOf}`;
+  document.getElementById('game-title').textContent =
+    `${gameState.type} • Leg ${gameState.currentLeg}/${gameState.bestOf}`;
+  document.getElementById('game-subtitle').textContent =
+    `Best of ${gameState.bestOf}`;
 
   // Scoreboard
   renderScoreboard();
@@ -207,22 +210,22 @@ const render = () => {
   }
 
   // History - hide for finished games
-  const historySection = document.querySelector("#history").parentElement;
-  if (gameState.status === "finished") {
-    historySection.classList.add("hidden");
+  const historySection = document.querySelector('#history').parentElement;
+  if (gameState.status === 'finished') {
+    historySection.classList.add('hidden');
   } else {
-    historySection.classList.remove("hidden");
+    historySection.classList.remove('hidden');
     renderHistory();
   }
 };
 
 // Render scoreboard
 const renderScoreboard = () => {
-  const scoreboard = document.getElementById("scoreboard");
+  const scoreboard = document.getElementById('scoreboard');
 
   // Find winner if game is finished
   const winner =
-    gameState.status === "finished"
+    gameState.status === 'finished'
       ? gameState.players.reduce((prev, current) =>
           current.legsWon > prev.legsWon ? current : prev
         )
@@ -235,55 +238,55 @@ const renderScoreboard = () => {
 
       return `
       <div class="bg-white rounded-lg shadow-lg p-4 ${
-        isCurrentPlayer && gameState.status !== "finished"
-          ? "player-active"
-          : ""
+        isCurrentPlayer && gameState.status !== 'finished'
+          ? 'player-active'
+          : ''
       } ${
-        isWinner ? "border-4 border-yellow-400 bg-yellow-50" : ""
+        isWinner ? 'border-4 border-yellow-400 bg-yellow-50' : ''
       }" data-player-index="${idx}">
         <div class="flex justify-between items-start mb-2">
           <div>
             <h2 class="text-xl font-bold ${
               isWinner
-                ? "text-yellow-600"
+                ? 'text-yellow-600'
                 : isCurrentPlayer
-                ? "text-green-600"
-                : "text-gray-800"
+                  ? 'text-green-600'
+                  : 'text-gray-800'
             }">
               ${
                 isWinner
-                  ? "🏆 "
-                  : isCurrentPlayer && gameState.status !== "finished"
-                  ? "⭐ "
-                  : ""
+                  ? '🏆 '
+                  : isCurrentPlayer && gameState.status !== 'finished'
+                    ? '⭐ '
+                    : ''
               }${player.name}
             </h2>
             <div class="text-sm text-gray-600">Legi: ${player.legsWon}</div>
           </div>
           ${
-            gameState.status !== "finished"
+            gameState.status !== 'finished'
               ? `
           <div class="text-right">
             <div class="text-3xl font-bold text-purple-600 score-value">${player.currentScore}</div>
             <div class="text-xs text-gray-500">pozostało</div>
           </div>
           `
-              : ""
+              : ''
           }
         </div>
         
         <div class="${
-          gameState.status === "finished" ? "" : "grid grid-cols-2 gap-2"
+          gameState.status === 'finished' ? '' : 'grid grid-cols-2 gap-2'
         } text-sm">
           ${
-            gameState.status !== "finished"
+            gameState.status !== 'finished'
               ? `
           <div>
             <span class="text-gray-600">Śr. leg:</span>
             <span class="font-semibold">${player.avgThisLeg.toFixed(1)}</span>
           </div>
           `
-              : ""
+              : ''
           }
           <div>
             <span class="text-gray-600">Śr. mecz:</span>
@@ -293,22 +296,22 @@ const renderScoreboard = () => {
       </div>
     `;
     })
-    .join("");
+    .join('');
 };
 
 // Render admin panel
 const renderAdminPanel = () => {
-  const panel = document.getElementById("admin-panel");
-  panel.classList.remove("hidden");
+  const panel = document.getElementById('admin-panel');
+  panel.classList.remove('hidden');
 
   const currentPlayer = gameState.players[gameState.currentPlayer];
 
   const formattedTurn = gameState.currentTurn
     .map((d) => formatDart(d))
-    .join(", ");
+    .join(', ');
 
   // Use "—" if empty
-  const displayTurn = formattedTurn || "—";
+  const displayTurn = formattedTurn || '—';
 
   panel.innerHTML = `
     <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white">
@@ -345,7 +348,7 @@ const renderAdminPanel = () => {
           <button class="score-btn bg-white/30 hover:bg-white/50 font-bold py-3 rounded text-sm" data-score="${n}">${n}</button>
         `
           )
-          .join("")}
+          .join('')}
         <button class="score-btn bg-white/30 hover:bg-white/50 font-bold py-3 rounded text-sm" data-score="25">25</button>
         <button class="score-btn bg-white/30 hover:bg-white/50 font-bold py-3 rounded text-sm col-span-2" data-score="25" data-multiplier="2">BULL</button>
       </div>
@@ -365,30 +368,30 @@ const setupAdminHandlers = () => {
   let selectedMultiplier = 1;
 
   // Multiplier buttons
-  document.querySelectorAll(".multiplier-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".multiplier-btn").forEach((b) => {
-        b.classList.remove("bg-white/90", "active");
-        b.classList.add("bg-white/30");
+  document.querySelectorAll('.multiplier-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.multiplier-btn').forEach((b) => {
+        b.classList.remove('bg-white/90', 'active');
+        b.classList.add('bg-white/30');
       });
-      btn.classList.add("bg-white/90", "active");
-      btn.classList.remove("bg-white/30");
+      btn.classList.add('bg-white/90', 'active');
+      btn.classList.remove('bg-white/30');
       selectedMultiplier = parseInt(btn.dataset.multiplier);
     });
   });
 
   // Score buttons
-  document.querySelectorAll(".score-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll('.score-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
       const score =
-        btn.dataset.score === "null" ? null : parseInt(btn.dataset.score);
+        btn.dataset.score === 'null' ? null : parseInt(btn.dataset.score);
       const multiplier = btn.dataset.multiplier
         ? parseInt(btn.dataset.multiplier)
         : selectedMultiplier;
 
       // Validate
       if (score === 25 && multiplier === 3) {
-        showToast("Bull nie może być triple", "error");
+        showToast('Bull nie może być triple', 'error');
         return;
       }
 
@@ -397,7 +400,7 @@ const setupAdminHandlers = () => {
   });
 
   // Undo button
-  document.getElementById("undo-btn").addEventListener("click", () => {
+  document.getElementById('undo-btn').addEventListener('click', () => {
     undoDart();
   });
 };
@@ -406,7 +409,7 @@ const setupAdminHandlers = () => {
 const addDart = (score, multiplier) => {
   if (!socket) return;
 
-  socket.emit("game:add-dart", {
+  socket.emit('game:add-dart', {
     gameId,
     adminToken,
     score,
@@ -418,7 +421,7 @@ const addDart = (score, multiplier) => {
 const undoDart = () => {
   if (!socket) return;
 
-  socket.emit("game:undo-dart", {
+  socket.emit('game:undo-dart', {
     gameId,
     adminToken,
   });
@@ -426,10 +429,10 @@ const undoDart = () => {
 
 // Format dart for display
 const formatDart = (dart) => {
-  if (!dart) return "—";
-  if (dart.score === null) return "0"; // MISS displays as 0
+  if (!dart) return '—';
+  if (dart.score === null) return '0'; // MISS displays as 0
 
-  const prefix = dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "";
+  const prefix = dart.multiplier === 3 ? 'T' : dart.multiplier === 2 ? 'D' : '';
   return `${prefix}${dart.score}`;
 };
 
@@ -437,7 +440,7 @@ const formatDart = (dart) => {
 let showAllHistory = false;
 
 const renderHistory = async () => {
-  const historyContainer = document.getElementById("history");
+  const historyContainer = document.getElementById('history');
 
   try {
     const history = await api.getHistory(gameId);
@@ -455,9 +458,9 @@ const renderHistory = async () => {
 
     const historyHTML = displayHistory
       .map((turn) => {
-        const dartsDisplay = turn.darts.map((d) => formatDart(d)).join(", ");
+        const dartsDisplay = turn.darts.map((d) => formatDart(d)).join(', ');
         const scoreChange = turn.remainingBefore - turn.remainingAfter;
-        const bustClass = turn.isBust ? "text-red-600 font-bold" : "";
+        const bustClass = turn.isBust ? 'text-red-600 font-bold' : '';
 
         return `
           <div class="flex justify-between items-center p-2 border-b border-gray-200 ${bustClass}">
@@ -466,7 +469,7 @@ const renderHistory = async () => {
               <span class="text-gray-600 ml-2 text-xs md:text-sm">${dartsDisplay}</span>
             </div>
             <div class="text-right">
-              <div class="font-bold">${turn.isBust ? "BUST" : scoreChange}</div>
+              <div class="font-bold">${turn.isBust ? 'BUST' : scoreChange}</div>
               <div class="text-xs text-gray-500">${
                 turn.remainingAfter ?? turn.remainingBefore
               } pkt</div>
@@ -475,7 +478,7 @@ const renderHistory = async () => {
         `;
       })
       .reverse()
-      .join("");
+      .join('');
 
     const showMoreButton =
       !showAllHistory && hasMore
@@ -483,24 +486,24 @@ const renderHistory = async () => {
             history.length - displayLimit
           } więcej</button>`
         : showAllHistory && history.length > 10
-        ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Pokaż mniej</button>`
-        : "";
+          ? `<button id="show-less-history" class="w-full py-2 text-purple-600 hover:text-purple-800 text-sm font-semibold">Pokaż mniej</button>`
+          : '';
 
     historyContainer.innerHTML = historyHTML + showMoreButton;
 
     // Add event listeners for show more/less buttons
-    const showMoreBtn = document.getElementById("show-more-history");
-    const showLessBtn = document.getElementById("show-less-history");
+    const showMoreBtn = document.getElementById('show-more-history');
+    const showLessBtn = document.getElementById('show-less-history');
 
     if (showMoreBtn) {
-      showMoreBtn.addEventListener("click", () => {
+      showMoreBtn.addEventListener('click', () => {
         showAllHistory = true;
         renderHistory();
       });
     }
 
     if (showLessBtn) {
-      showLessBtn.addEventListener("click", () => {
+      showLessBtn.addEventListener('click', () => {
         showAllHistory = false;
         renderHistory();
       });
@@ -509,73 +512,73 @@ const renderHistory = async () => {
     // Auto-scroll to top (latest turns at top after reverse)
     historyContainer.scrollTop = 0;
   } catch (error) {
-    console.error("Error loading history:", error);
+    console.error('Error loading history:', error);
     historyContainer.innerHTML =
       '<div class="text-red-500 text-center py-4">Błąd ładowania historii</div>';
   }
 };
 
 // Copy link
-document.getElementById("copy-link-btn").addEventListener("click", async () => {
+document.getElementById('copy-link-btn').addEventListener('click', async () => {
   if (isAdmin) {
     // Show modal for admin to choose which link
-    document.getElementById("copy-modal").classList.remove("hidden");
+    document.getElementById('copy-modal').classList.remove('hidden');
   } else {
     // Direct copy for non-admin (view-only link)
     const link =
-      window.location.origin + window.location.pathname + "?id=" + gameId;
+      window.location.origin + window.location.pathname + '?id=' + gameId;
     const success = await copyToClipboard(link);
     if (success) {
-      showToast("Link skopiowany!", "success");
+      showToast('Link skopiowany!', 'success');
     }
   }
 });
 
 // Modal handlers
 document
-  .getElementById("copy-admin-link")
-  .addEventListener("click", async () => {
+  .getElementById('copy-admin-link')
+  .addEventListener('click', async () => {
     const adminLink = window.location.href; // Full URL with admin token
     const success = await copyToClipboard(adminLink);
     if (success) {
-      showToast("Link admina skopiowany!", "success");
+      showToast('Link admina skopiowany!', 'success');
     }
-    document.getElementById("copy-modal").classList.add("hidden");
+    document.getElementById('copy-modal').classList.add('hidden');
   });
 
 document
-  .getElementById("copy-view-link")
-  .addEventListener("click", async () => {
+  .getElementById('copy-view-link')
+  .addEventListener('click', async () => {
     const viewLink =
-      window.location.origin + window.location.pathname + "?id=" + gameId;
+      window.location.origin + window.location.pathname + '?id=' + gameId;
     const success = await copyToClipboard(viewLink);
     if (success) {
-      showToast("Link do oglądania skopiowany!", "success");
+      showToast('Link do oglądania skopiowany!', 'success');
     }
-    document.getElementById("copy-modal").classList.add("hidden");
+    document.getElementById('copy-modal').classList.add('hidden');
   });
 
-document.getElementById("close-modal").addEventListener("click", () => {
-  document.getElementById("copy-modal").classList.add("hidden");
+document.getElementById('close-modal').addEventListener('click', () => {
+  document.getElementById('copy-modal').classList.add('hidden');
 });
 
 // Close modal on backdrop click
-document.getElementById("copy-modal").addEventListener("click", (e) => {
-  if (e.target.id === "copy-modal") {
-    document.getElementById("copy-modal").classList.add("hidden");
+document.getElementById('copy-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'copy-modal') {
+    document.getElementById('copy-modal').classList.add('hidden');
   }
 });
 
 // Show error
 const showError = (message) => {
-  document.getElementById("loading").classList.add("hidden");
-  document.getElementById("error").textContent = message;
-  document.getElementById("error").classList.remove("hidden");
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error').textContent = message;
+  document.getElementById('error').classList.remove('hidden');
 };
 
 // Show game summary
 const showGameSummary = (data) => {
-  const modal = document.getElementById("summary-modal");
+  const modal = document.getElementById('summary-modal');
 
   // Find winner (player with most legs won)
   const winner = data.players.reduce((prev, current) =>
@@ -583,8 +586,8 @@ const showGameSummary = (data) => {
   );
 
   // Set winner info
-  document.getElementById("winner-name").textContent = winner.name;
-  document.getElementById("game-info").textContent = `${data.type} • Best of ${
+  document.getElementById('winner-name').textContent = winner.name;
+  document.getElementById('game-info').textContent = `${data.type} • Best of ${
     data.bestOf
   } • ${winner.legsWon} - ${
     data.players.find((p) => p.id !== winner.id).legsWon
@@ -599,16 +602,16 @@ const showGameSummary = (data) => {
       return `
         <div class="flex items-center justify-between p-3 ${
           isWinner
-            ? "bg-green-100 border-2 border-green-500"
-            : "bg-white border border-gray-200"
+            ? 'bg-green-100 border-2 border-green-500'
+            : 'bg-white border border-gray-200'
         } rounded-lg slide-up delay-${delay}">
           <div class="flex items-center gap-3">
             <div class="text-2xl">${
-              index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"
+              index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'
             }</div>
             <div>
               <div class="font-semibold text-lg ${
-                isWinner ? "text-green-700" : "text-gray-800"
+                isWinner ? 'text-green-700' : 'text-gray-800'
               }">
                 ${player.name}
               </div>
@@ -617,31 +620,33 @@ const showGameSummary = (data) => {
               </div>
             </div>
           </div>
-          ${isWinner ? '<div class="text-3xl">🏆</div>' : ""}
+          ${isWinner ? '<div class="text-3xl">🏆</div>' : ''}
         </div>
       `;
     })
-    .join("");
+    .join('');
 
-  document.getElementById("final-scores").innerHTML = scoresHTML;
+  document.getElementById('final-scores').innerHTML = scoresHTML;
 
   // Show modal
-  modal.classList.remove("hidden");
+  modal.classList.remove('hidden');
 };
 
 // Summary modal buttons
-document.getElementById("new-game-btn").addEventListener("click", () => {
-  window.location.href = "/";
+document.getElementById('new-game-btn').addEventListener('click', () => {
+  const basePath = getBasePath();
+  window.location.href = `${basePath}/`;
 });
 
-document.getElementById("home-btn").addEventListener("click", () => {
-  window.location.href = "/";
+document.getElementById('home-btn').addEventListener('click', () => {
+  const basePath = getBasePath();
+  window.location.href = `${basePath}/`;
 });
 
 // Close summary modal on backdrop click
-document.getElementById("summary-modal").addEventListener("click", (e) => {
-  if (e.target.id === "summary-modal") {
-    document.getElementById("summary-modal").classList.add("hidden");
+document.getElementById('summary-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'summary-modal') {
+    document.getElementById('summary-modal').classList.add('hidden');
   }
 });
 
